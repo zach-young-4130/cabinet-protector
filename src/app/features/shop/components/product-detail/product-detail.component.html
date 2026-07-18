@@ -1,0 +1,240 @@
+<app-navbar></app-navbar>
+
+<main>
+  @if (product) {
+    <section class="detail-hero py-4 border-bottom" aria-labelledby="product-heading">
+      <div class="container py-lg-3">
+        <nav aria-label="Breadcrumb" class="mb-3">
+          <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a routerLink="/shop">Shop</a></li>
+            <li class="breadcrumb-item active">{{ product.name }}</li>
+          </ol>
+        </nav>
+
+        <p class="eyebrow mb-2">Cabinet Base Barrier Strip</p>
+        <div class="d-flex flex-wrap align-items-baseline gap-3 mb-2">
+          <h1 id="product-heading" class="display-6 fw-bold mb-0">{{ product.name }}</h1>
+          <span class="fs-3 fw-bold text-navy">${{ product.price | number:'1.2-2' }}</span>
+        </div>
+        <p class="lead mb-0 detail-lead">
+          {{ product.description }}
+        </p>
+      </div>
+    </section>
+
+    <section class="py-5">
+      <div class="container">
+        <div class="row g-5">
+          <div class="col-lg-7">
+            <figure class="mb-5">
+              <div class="preview-visual shadow-sm" aria-hidden="true">
+                <div class="preview-panel"></div>
+                <span class="preview-knob"></span>
+                <div class="preview-strip" [style.background]="selectedFinish().hex"></div>
+              </div>
+              <figcaption class="text-muted small mt-2">
+                @if (selectedFinish().kind === 'paint-match') {
+                  Shown primed — painted to match your Sherwin-Williams color before shipping
+                } @else {
+                  Shown in {{ selectedFinish().label }}
+                }
+              </figcaption>
+            </figure>
+
+            <p class="eyebrow mb-2">Why It Works</p>
+            <h2 class="h4 mb-3">Built for the strike zone</h2>
+            <ul class="list-group list-group-flush border rounded mb-5">
+              @if (product.isPaintable) {
+                <li class="list-group-item bg-transparent">
+                  <span class="fw-bold text-success" aria-hidden="true">✓</span> Paintable — primed for any latex or enamel paint
+                </li>
+              }
+              @if (product.isRemovable) {
+                <li class="list-group-item bg-transparent">
+                  <span class="fw-bold text-success" aria-hidden="true">✓</span> Removable — peels off clean, no residue
+                </li>
+              }
+              @if (product.isCuttable) {
+                <li class="list-group-item bg-transparent">
+                  <span class="fw-bold text-success" aria-hidden="true">✓</span> Cuttable — trim to your cabinet run with a utility knife
+                </li>
+              }
+            </ul>
+
+            <p class="eyebrow mb-2">Details</p>
+            <h2 class="h4 mb-3">Specifications</h2>
+            <div class="card spec-card p-3">
+              <table class="table table-sm spec-table mb-0">
+                <caption class="visually-hidden">Material specifications for {{ product.name }}</caption>
+                <tbody>
+                  <tr>
+                    <th scope="row">Coverage</th>
+                    <td>Base of floor-length cabinet doors and panels</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Material</th>
+                    <td>20-mil commercial-grade vinyl</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Surface</th>
+                    <td>Factory-primed matte white</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Custom-cut tolerance</th>
+                    <td>&plusmn;1/16"</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Warranty</th>
+                    <td>10-year material warranty</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="col-lg-5">
+            <form [formGroup]="sizeForm" (ngSubmit)="addToCart()" class="card size-card shadow-sm p-4">
+              <fieldset class="mb-4">
+                <legend class="h5 mb-3">Choose your size</legend>
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="radio" id="mode-standard" formControlName="mode" value="standard">
+                  <label class="form-check-label fw-bold" for="mode-standard">Available sizes</label>
+                  <p class="form-text mb-0">Pre-cut strips matched to national cabinet brands' base widths.</p>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" id="mode-custom" formControlName="mode" value="custom">
+                  <label class="form-check-label fw-bold" for="mode-custom">Custom measurements</label>
+                  <p class="form-text mb-0">Cut to your exact cabinet base, within 1/16 of an inch.</p>
+                </div>
+              </fieldset>
+
+              @if (!isCustomMode) {
+                <fieldset class="mb-4">
+                  <legend class="h6 mb-2">Available sizes</legend>
+                  @for (size of product.availableSizes; track size.id) {
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" [id]="'size-' + size.id"
+                             formControlName="standardSizeId" [value]="size.id">
+                      <label class="form-check-label" [for]="'size-' + size.id">
+                        {{ size.label }} ({{ size.widthInches }}" wide &times; {{ size.heightInches }}" up from the floor)
+                      </label>
+                    </div>
+                  }
+                </fieldset>
+              } @else {
+                <fieldset class="mb-4">
+                  <legend class="h6 mb-2">Your measurements</legend>
+                  <p class="form-text mt-0 mb-3">
+                    Measure along the bottom edge of the cabinet run (width) and up from the floor to just above
+                    the strike zone (height). Enter inches, down to 1/16" (0.0625).
+                  </p>
+                  <div class="row g-3">
+                    <div class="col-6">
+                      <label class="form-label" for="customWidth">Width (inches)</label>
+                      <input type="number" id="customWidth" class="form-control" formControlName="customWidth"
+                             [min]="widthRange.min" [max]="widthRange.max" step="0.0625" inputmode="decimal"
+                             [class.is-invalid]="sizeForm.controls.customWidth.touched && sizeForm.controls.customWidth.invalid">
+                      <div class="form-text">{{ widthRange.min }}"&ndash;{{ widthRange.max }}"</div>
+                      @if (sizeForm.controls.customWidth.touched && sizeForm.controls.customWidth.invalid) {
+                        <div class="invalid-feedback" role="alert">
+                          Enter a width between {{ widthRange.min }}" and {{ widthRange.max }}".
+                        </div>
+                      }
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label" for="customHeight">Height (inches)</label>
+                      <input type="number" id="customHeight" class="form-control" formControlName="customHeight"
+                             [min]="heightRange.min" [max]="heightRange.max" step="0.0625" inputmode="decimal"
+                             [class.is-invalid]="sizeForm.controls.customHeight.touched && sizeForm.controls.customHeight.invalid">
+                      <div class="form-text">{{ heightRange.min }}"&ndash;{{ heightRange.max }}"</div>
+                      @if (sizeForm.controls.customHeight.touched && sizeForm.controls.customHeight.invalid) {
+                        <div class="invalid-feedback" role="alert">
+                          Enter a height between {{ heightRange.min }}" and {{ heightRange.max }}".
+                        </div>
+                      }
+                    </div>
+                  </div>
+                </fieldset>
+              }
+
+              <fieldset class="mb-4">
+                <legend class="h5 mb-3">Choose your finish</legend>
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="radio" id="finish-primed" formControlName="finishId" value="primed">
+                  <label class="form-check-label" for="finish-primed">
+                    <span class="finish-chip" [style.background]="primedFinish.hex" aria-hidden="true"></span>
+                    Primed white — paint it yourself
+                  </label>
+                  <p class="form-text mb-0">Takes any interior latex or enamel paint, from any brand.</p>
+                </div>
+                @for (color of stockColors(); track color.id) {
+                  <div class="form-check">
+                    <input class="form-check-input" type="radio" [id]="'finish-' + color.id"
+                           formControlName="finishId" [value]="color.id">
+                    <label class="form-check-label" [for]="'finish-' + color.id">
+                      <span class="finish-chip" [style.background]="color.hex" aria-hidden="true"></span>
+                      {{ color.name }}
+                      <span class="badge text-bg-success ms-1">In stock</span>
+                    </label>
+                  </div>
+                }
+                <div class="form-check mt-2">
+                  <input class="form-check-input" type="radio" id="finish-paint-match"
+                         formControlName="finishId" value="paint-match">
+                  <label class="form-check-label" for="finish-paint-match">
+                    Paint match — your Sherwin-Williams color
+                    <span class="badge text-bg-info ms-1">+${{ paintMatchFee | number:'1.2-2' }}/strip</span>
+                  </label>
+                  <p class="form-text mb-0">
+                    Send us your Sherwin-Williams paint code and we paint each strip to match before it ships.
+                    Sherwin-Williams colors only.
+                  </p>
+                  @if (isPaintMatch) {
+                    <div class="mt-2">
+                      <label class="form-label" for="paintCode">Sherwin-Williams paint code</label>
+                      <input type="text" id="paintCode" class="form-control" formControlName="paintCode"
+                             placeholder="SW 7008" autocomplete="off"
+                             [class.is-invalid]="sizeForm.controls.paintCode.touched && sizeForm.controls.paintCode.invalid">
+                      <div class="form-text">The 4-digit SW number on your paint can lid or swatch (e.g., SW 7008 Alabaster).</div>
+                      @if (sizeForm.controls.paintCode.touched && sizeForm.controls.paintCode.invalid) {
+                        <div class="invalid-feedback" role="alert">
+                          Enter a valid Sherwin-Williams code like SW 7008.
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+                <p class="form-text mt-2 mb-0">
+                  Pre-painted strips in standard sizes ship within 1 business day. Paint-matched and custom-cut
+                  orders ship in 3&ndash;5 business days.
+                </p>
+              </fieldset>
+
+              <button
+                type="submit"
+                class="btn btn-primary btn-lg"
+                [attr.aria-label]="'Add ' + product.name + ' to cart'">
+                Add to Cart
+              </button>
+              <p class="form-text text-center mt-2 mb-0">Same price for standard and custom cuts, primed or pre-painted. No minimum order.</p>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+  } @else if (notFound) {
+    <div class="container py-5">
+      <div class="text-center py-5">
+        <h1 class="h3 mb-3">We couldn't find that product</h1>
+        <p class="text-muted mb-4">It may have been removed, or the link is out of date.</p>
+        <a routerLink="/shop" class="btn btn-primary px-4">Back to the Shop</a>
+      </div>
+    </div>
+  } @else {
+    <div class="container py-5">
+      <div class="text-center py-5">
+        <p role="status">Loading product…</p>
+      </div>
+    </div>
+  }
+</main>

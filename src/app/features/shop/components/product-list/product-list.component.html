@@ -1,0 +1,93 @@
+<app-navbar></app-navbar>
+
+<main>
+  <section class="shop-hero py-5 border-bottom" aria-labelledby="shop-heading">
+    <div class="container py-lg-4">
+      <p class="eyebrow mb-2">Shop</p>
+      <h1 id="shop-heading" class="display-5 fw-bold mb-3">Barrier strips for every cabinet base</h1>
+      <p class="lead mb-0 shop-lead">
+        Paintable vinyl strips that protect floor-length cabinets from wheelchair footrests, walkers, and
+        everyday wear. Standard sizes ship in a day; custom cuts fit anything.
+      </p>
+    </div>
+  </section>
+
+  <section class="py-5" aria-label="Products">
+    <div class="container py-lg-3">
+      @if (productsStatus() === 'error') {
+        <div class="alert alert-danger d-flex flex-wrap justify-content-between align-items-center gap-3" role="alert">
+          <span>We couldn't load our products. Check your connection and try again.</span>
+          <button type="button" class="btn btn-outline-danger" (click)="retry()">Try Again</button>
+        </div>
+      } @else if (productsStatus() === 'loading' && products().length === 0) {
+        <p class="text-center text-muted py-5 mb-0" role="status">Loading products…</p>
+      } @else {
+      <div class="row g-4 justify-content-center">
+        @for (product of products(); track product.id; let i = $index) {
+          <div class="col-md-6 col-lg-5">
+            <article class="card product-card h-100 shadow-sm">
+              <div class="product-visual" aria-hidden="true">
+                <div class="product-visual-panel"></div>
+                <div class="product-visual-strip" [style.background]="stripColor(i)"></div>
+              </div>
+              <div class="card-body p-4 d-flex flex-column">
+                <h2 class="h4 card-title mb-2">{{ product.name }}</h2>
+                <p class="card-text text-muted">{{ product.description }}</p>
+                <ul class="list-inline mb-3" [attr.aria-label]="product.name + ' features'">
+                  @if (product.isPaintable) {
+                    <li class="list-inline-item feature-tag">Paintable</li>
+                  }
+                  @if (product.isRemovable) {
+                    <li class="list-inline-item feature-tag">Removable</li>
+                  }
+                  @if (product.isCuttable) {
+                    <li class="list-inline-item feature-tag">Cuttable</li>
+                  }
+                </ul>
+                <p class="small text-muted mb-4">
+                  Sizes: {{ sizeSummary(product) }} &middot; custom cuts available
+                </p>
+                <div class="d-flex justify-content-between align-items-center mt-auto">
+                  <span class="fs-4 fw-bold text-navy">${{ product.price | number:'1.2-2' }}</span>
+                  <a
+                    class="btn btn-primary px-4"
+                    [routerLink]="['/shop', product.id]"
+                    [attr.aria-label]="'View details for ' + product.name">
+                    View Details
+                  </a>
+                </div>
+              </div>
+            </article>
+          </div>
+        }
+      </div>
+
+      @if (products().length === 0) {
+        <div class="alert alert-warning">
+          No products available at this time. Please check back later.
+        </div>
+      }
+      }
+    </div>
+  </section>
+
+  <section class="py-5 bg-white border-top" aria-labelledby="shop-colors-heading">
+    <div class="container py-lg-3 text-center">
+      <p class="eyebrow mb-2">Finishes</p>
+      <h2 id="shop-colors-heading" class="mb-3">Primed for your paint — or pre-painted and in stock</h2>
+      <p class="text-muted mx-auto mb-4 colors-copy">
+        Every strip is available factory-primed to take any brand's paint, or pre-painted in our six
+        most-requested colors — stocked and ready to ship within 1 business day. Have an exact
+        Sherwin-Williams color? We'll paint to match for a small per-strip fee.
+      </p>
+      <ul class="list-inline mb-0" aria-label="In-stock pre-painted colors">
+        @for (color of stockColors(); track color.id) {
+          <li class="list-inline-item me-4 mb-2 fw-semibold color-item">
+            <span class="finish-chip finish-chip-lg" [style.background]="color.hex" aria-hidden="true"></span>
+            {{ color.name }}
+          </li>
+        }
+      </ul>
+    </div>
+  </section>
+</main>

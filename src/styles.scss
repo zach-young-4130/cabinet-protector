@@ -1,0 +1,50 @@
+/* You can add global styles to this file, and also import other style files */
+
+:root {
+  --navy: #1f3a5f;
+  --navy-dark: #16293f;
+  --warm-bg: #f7f5f1;
+}
+
+/* Shared editorial page styles (home, about, faq) */
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--navy);
+
+  &.eyebrow-light {
+    color: rgba(255, 255, 255, 0.75);
+  }
+}
+
+.text-navy {
+  color: var(--navy);
+}
+
+.bg-navy {
+  background-color: var(--navy);
+}
+
+/* Site-wide navy primary buttons (Bootstrap CSS-variable override) */
+.btn-primary {
+  --bs-btn-bg: var(--navy);
+  --bs-btn-border-color: var(--navy);
+  --bs-btn-hover-bg: var(--navy-dark);
+  --bs-btn-hover-border-color: var(--navy-dark);
+  --bs-btn-active-bg: var(--navy-dark);
+  --bs-btn-active-border-color: var(--navy-dark);
+  --bs-btn-disabled-bg: var(--navy);
+  --bs-btn-disabled-border-color: var(--navy);
+}
+
+/* Small inline color swatch used wherever a finish is shown */
+.finish-chip {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  vertical-align: -2px;
+}

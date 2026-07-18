@@ -1,0 +1,96 @@
+:host {
+  display: block;
+}
+
+.detail-hero {
+  background-color: var(--warm-bg);
+
+  .breadcrumb {
+    background: transparent;
+    padding: 0;
+  }
+}
+
+.detail-lead {
+  max-width: 720px;
+}
+
+/* Illustrated cabinet base; the strip repaints live with the selected finish */
+.preview-visual {
+  position: relative;
+  height: 200px;
+  background: #edeae0;
+  border: 1px solid #d8d3c4;
+  border-radius: 6px;
+  overflow: hidden;
+
+  .preview-panel {
+    position: absolute;
+    inset: 24px 32px 0;
+    border: 2px solid #d8d3c4;
+    border-bottom: none;
+    border-radius: 2px 2px 0 0;
+    background: #f2efe6;
+  }
+
+  .preview-knob {
+    position: absolute;
+    right: 16px;
+    top: 40%;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--navy);
+  }
+
+  .preview-strip {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 52px;
+    border-top: 1px solid rgba(0, 0, 0, 0.12);
+    transition: background 0.25s ease;
+  }
+}
+
+.list-group-item {
+  padding: 1rem 0.75rem;
+}
+
+.spec-card {
+  border: 1px solid #e2e0d8;
+  border-radius: 6px;
+}
+
+.spec-table {
+  th {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+}
+
+.size-card {
+  border: 1px solid #e2e0d8;
+  border-radius: 6px;
+  border-top: 3px solid var(--navy);
+
+  legend {
+    float: none;
+    width: auto;
+    font-size: inherit;
+  }
+}
+
+@media (min-width: 992px) {
+  .size-card {
+    position: sticky;
+    top: 1.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preview-visual .preview-strip {
+    transition: none;
+  }
+}

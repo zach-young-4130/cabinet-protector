@@ -1,0 +1,95 @@
+<app-navbar></app-navbar>
+
+<div class="container py-5">
+  <h1 class="mb-4">Your Shopping Cart</h1>
+
+  @if (items().length === 0) {
+    <div class="alert alert-info border-primary" role="alert">
+      Your cart is currently empty. Browse our products to get started!
+    </div>
+  } @else {
+    <div class="row">
+      <div class="col-lg-8">
+        <div class="list-group">
+          @for (item of items(); track item.key) {
+            <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+              <div>
+                <h5 class="mb-0">{{ item.product.name }}</h5>
+                <p class="mb-0 small">
+                  {{ item.size.label }}
+                  @if (item.size.kind === 'custom') {
+                    <span class="badge text-bg-info ms-1">Custom cut</span>
+                  }
+                </p>
+                <p class="mb-0 small">
+                  <span class="finish-chip" [style.background]="item.finish.hex" aria-hidden="true"></span>
+                  {{ item.finish.label }}
+                  @if (item.finish.kind === 'stock') {
+                    <span class="badge text-bg-success ms-1">In stock</span>
+                  } @else if (item.finish.kind === 'paint-match') {
+                    <span class="badge text-bg-info ms-1">Paint match</span>
+                  }
+                </p>
+                <small class="text-muted">
+                  ${{ unitPrice(item) | number:'1.2-2' }} each
+                  @if (item.finish.surcharge > 0) {
+                    (includes ${{ item.finish.surcharge | number:'1.2-2' }} paint match)
+                  }
+                </small>
+              </div>
+              <div class="d-flex align-items-center gap-3">
+                <div class="btn-group" role="group"
+                     [attr.aria-label]="'Quantity controls for ' + itemLabel(item)">
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    [disabled]="item.quantity === 1"
+                    [attr.aria-label]="'Decrease quantity of ' + itemLabel(item)"
+                    (click)="decreaseQuantity(item.key)">
+                    &minus;
+                  </button>
+                  <span class="btn btn-outline-secondary pe-none" role="status"
+                        [attr.aria-label]="'Quantity of ' + itemLabel(item) + ': ' + item.quantity">
+                    {{ item.quantity }}
+                  </span>
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    [attr.aria-label]="'Increase quantity of ' + itemLabel(item)"
+                    (click)="increaseQuantity(item.key)">
+                    +
+                  </button>
+                </div>
+                <span class="fw-bold">${{ unitPrice(item) * item.quantity | number:'1.2-2' }}</span>
+                <button
+                  type="button"
+                  class="btn btn-outline-danger"
+                  [attr.aria-label]="'Remove ' + itemLabel(item) + ' from cart'"
+                  (click)="removeItem(item.key)">
+                  Remove
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card border-primary shadow-sm p-4">
+          <h3 class="h5 mb-4">Order Summary</h3>
+          <div class="d-flex justify-content-between mb-2">
+            <span>Subtotal</span>
+            <span>${{ totalAmount() | number:'1.2-2' }}</span>
+          </div>
+          <hr />
+          <div class="d-flex justify-content-between align-items-center mt-4">
+            <span class="fw-bold">Total</span>
+            <span class="h4 fw-bold">${{ totalAmount() | number:'1.2-2' }}</span>
+          </div>
+          <a routerLink="/checkout" class="btn btn-primary w-100 mt-3 py-2">
+            Proceed to Checkout
+          </a>
+        </div>
+      </div>
+    </div>
+  }
+</div>

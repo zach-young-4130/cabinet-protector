@@ -1,0 +1,77 @@
+:host {
+  display: block;
+}
+
+.shop-hero {
+  background-color: var(--warm-bg);
+}
+
+.shop-lead,
+.colors-copy {
+  max-width: 640px;
+}
+
+.product-card {
+  border: 1px solid #e2e0d8;
+  border-radius: 6px;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1) !important;
+  }
+
+  /* Accessibility focus indicator */
+  &:focus-within {
+    outline: 2px solid var(--navy);
+    border-color: var(--navy);
+  }
+}
+
+/* Illustrated cabinet base with its barrier strip */
+.product-visual {
+  position: relative;
+  height: 120px;
+  background: #edeae0;
+  border-bottom: 1px solid #d8d3c4;
+
+  .product-visual-panel {
+    position: absolute;
+    inset: 16px 24px 0;
+    border: 2px solid #d8d3c4;
+    border-bottom: none;
+    border-radius: 2px 2px 0 0;
+    background: #f2efe6;
+  }
+
+  .product-visual-strip {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 34px;
+    border-top: 1px solid rgba(0, 0, 0, 0.12);
+  }
+}
+
+.feature-tag {
+  border: 1px solid var(--navy);
+  border-radius: 2rem;
+  color: var(--navy);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+}
+
+.color-item {
+  font-size: 0.9375rem;
+}
+
+.finish-chip-lg {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  vertical-align: -5px;
+  margin-right: 0.25rem;
+}

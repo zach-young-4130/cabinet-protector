@@ -2,15 +2,17 @@
   "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
   "version": 1,
   "cli": {
-    "packageManager": "npm"
+    "packageManager": "npm",
+    "analytics": "72fd9d7f-f715-40ca-9656-a2defd69215a"
   },
   "newProjectRoot": "projects",
   "projects": {
-    "ecommerce-cabinet-protector": {
+    "protect-vinyl": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
-          "standalone": false
+          "standalone": false,
+          "style": "scss"
         },
         "@schematics/angular:directive": {
           "standalone": false
@@ -34,9 +36,8 @@
                 "input": "public"
               }
             ],
-            "styles": [
-              "src/styles.css"
-            ]
+            "styles": ["src/styles.scss"],
+            "allowedCommonJsDependencies": ["sweetalert2"]
           },
           "configurations": {
             "production": {
@@ -57,7 +58,13 @@
             "development": {
               "optimization": false,
               "extractLicenses": false,
-              "sourceMap": true
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.development.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -66,10 +73,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "ecommerce-cabinet-protector:build:production"
+              "buildTarget": "protect-vinyl:build:production"
             },
             "development": {
-              "buildTarget": "ecommerce-cabinet-protector:build:development"
+              "buildTarget": "protect-vinyl:build:development"
             }
           },
           "defaultConfiguration": "development"

@@ -1,0 +1,229 @@
+<app-navbar></app-navbar>
+
+<main>
+  <!-- Hero -->
+  <section class="hero-section py-5 border-bottom" aria-labelledby="hero-heading">
+    <div class="container py-lg-4">
+      <div class="row align-items-center g-5">
+        <div class="col-lg-6">
+          <p class="eyebrow mb-2">Cabinet Base Barrier Strips</p>
+          <h1 id="hero-heading" class="display-4 fw-bold mb-3">Protect your cabinets where life actually hits them.</h1>
+          <p class="lead mb-4">
+            Wheelchair footrests, walkers, vacuums, and shoes all strike the same place: the bottom of the cabinet.
+            Our paintable, removable vinyl barrier strips absorb the impact so floor-length doors never chip or scuff —
+            sized for every national cabinet brand and custom-cut for one-of-a-kind kitchens.
+          </p>
+          <div class="d-flex flex-wrap gap-3">
+            <a routerLink="/shop" class="btn btn-primary btn-lg px-4">Browse Protectors</a>
+            <a href="#custom-measurements" class="btn btn-outline-dark btn-lg px-4">Custom Measurements</a>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="hero-visual mx-auto" role="img" aria-label="Floor-length cabinet door with a protective barrier strip across its base, shown alongside a stack of paint color swatches">
+            <div class="cabinet-door shadow">
+              <div class="cabinet-panel"></div>
+              <span class="cabinet-knob" aria-hidden="true"></span>
+              <div class="cabinet-strip" aria-hidden="true"></div>
+            </div>
+            <div class="swatch-stack" aria-hidden="true">
+              <span class="swatch-chip swatch-chip-alabaster"></span>
+              <span class="swatch-chip swatch-chip-sage"></span>
+              <span class="swatch-chip swatch-chip-navy"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust stats -->
+  <section class="py-4 bg-white border-bottom" aria-label="Company statistics">
+    <div class="container">
+      <div class="row text-center g-3">
+        @for (stat of stats(); track stat.label) {
+          <div class="col-6 col-lg-3">
+            <p class="h3 fw-bold mb-0 text-navy">{{ stat.value }}</p>
+            <p class="text-muted small mb-0">{{ stat.label }}</p>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Why choose -->
+  <section id="features" class="py-5" aria-labelledby="features-heading">
+    <div class="container py-lg-3">
+      <p class="eyebrow text-center mb-2">Why ProTectVinyl</p>
+      <h2 id="features-heading" class="text-center mb-5">Built to disappear into your kitchen</h2>
+      <div class="row g-4">
+        @for (feature of highlights(); track feature.title) {
+          <div class="col-md-4">
+            <div class="card h-100 feature-card shadow-sm">
+              <div class="card-body text-center p-4">
+                <h3 class="card-title h5">{{ feature.title }}</h3>
+                <p class="card-text text-muted">{{ feature.desc }}</p>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Paintable / color section -->
+  <section class="py-5 bg-white border-top border-bottom" aria-labelledby="color-heading">
+    <div class="container py-lg-3">
+      <div class="row align-items-center g-5">
+        <div class="col-lg-5">
+          <p class="eyebrow mb-2">Six Colors In Stock</p>
+          <h2 id="color-heading" class="mb-3">Pre-painted and ready to ship — or paint your own.</h2>
+          <p class="text-muted mb-3">
+            The six most-requested cabinet colors are pre-painted, in stock, and ship within 1 business day
+            in standard sizes. Pick your match and skip the paintbrush entirely.
+          </p>
+          <p class="text-muted mb-4">
+            Need a different color? Every strip also comes factory-primed, taking interior latex and enamel
+            paint from any brand the same way trim does. Or send us your Sherwin-Williams paint code and,
+            for a small per-strip fee, we'll paint to match before shipping.
+          </p>
+          <a routerLink="/shop" class="btn btn-outline-dark px-4">Shop Barrier Strips</a>
+        </div>
+        <div class="col-lg-7">
+          <ul class="list-unstyled row g-3 mb-0" aria-label="In-stock pre-painted colors, ready to ship">
+            @for (color of stockColors(); track color.id) {
+              <li class="col-6 col-md-4">
+                <div class="paint-swatch">
+                  <span class="paint-swatch-color" [style.background]="color.hex" aria-hidden="true"></span>
+                  <span class="paint-swatch-name">
+                    {{ color.name }}
+                    <span class="badge text-bg-success d-block mt-1 in-stock-badge">In stock</span>
+                  </span>
+                </div>
+              </li>
+            }
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="py-5" aria-labelledby="how-heading">
+    <div class="container py-lg-3">
+      <p class="eyebrow text-center mb-2">How It Works</p>
+      <h2 id="how-heading" class="text-center mb-5">From measurement to finished kitchen</h2>
+      <ol class="list-unstyled row g-4 mb-0">
+        @for (step of steps(); track step.title; let i = $index) {
+          <li class="col-md-6 col-lg-3">
+            <div class="h-100">
+              <span class="step-number" aria-hidden="true">{{ i + 1 }}</span>
+              <h3 class="h5 mt-3">{{ step.title }}</h3>
+              <p class="text-muted mb-0">{{ step.desc }}</p>
+            </div>
+          </li>
+        }
+      </ol>
+    </div>
+  </section>
+
+  <!-- Custom measurements -->
+  <section id="custom-measurements" class="py-5 bg-navy text-white" aria-labelledby="custom-heading">
+    <div class="container py-lg-3">
+      <div class="row g-5 align-items-center">
+        <div class="col-lg-6">
+          <p class="eyebrow eyebrow-light mb-2">Custom Cabinets Welcome</p>
+          <h2 id="custom-heading" class="mb-3">Custom measurements for custom cabinets</h2>
+          <p class="mb-3 opacity-75">
+            Locally built, refaced, or heirloom cabinetry rarely matches a standard size chart — so we cut to
+            your numbers instead. Every custom order is cut to within 1/16 of an inch of the measurements you provide.
+          </p>
+          <p class="mb-4 opacity-75">
+            Measure the width of each cabinet run and how high the strike zone reaches — a wheelchair footrest
+            usually lands in the first 8 inches above the floor. No minimum order, whether you need one base
+            panel or an entire accessible kitchen.
+          </p>
+          <a routerLink="/shop" class="btn btn-light px-4">Start a Custom Order</a>
+        </div>
+        <div class="col-lg-6">
+          <div class="card measure-card text-dark p-4">
+            <h3 class="h5 mb-3">Measuring checklist</h3>
+            <ul class="mb-0 measure-list">
+              <li><strong>Width:</strong> measure along the bottom edge of the cabinet run, end to end.</li>
+              <li><strong>Height:</strong> measure up from the floor to just above the highest scuff or strike point — typically 4"&ndash;8" for wheelchair footrests.</li>
+              <li><strong>Profile:</strong> note flat-panel, shaker, or raised-panel doors so we match the coverage area.</li>
+              <li><strong>Precision:</strong> round to the nearest 1/16 of an inch; we cut to that number.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- National suppliers -->
+  <section class="py-5 bg-white border-bottom" aria-labelledby="suppliers-heading">
+    <div class="container py-lg-3 text-center">
+      <p class="eyebrow mb-2">Nationwide Compatibility</p>
+      <h2 id="suppliers-heading" class="mb-3">Sized for every national cabinet supplier</h2>
+      <p class="text-muted mx-auto mb-4 suppliers-copy">
+        We keep current base-width sizing charts for the cabinet lines national suppliers ship across the
+        country, so standard strips fit right out of the package — no trimming required.
+      </p>
+      <ul class="list-inline supplier-list mb-2" aria-label="Compatible national cabinet brands">
+        @for (supplier of suppliers(); track supplier) {
+          <li class="list-inline-item supplier-name">{{ supplier }}</li>
+        }
+      </ul>
+      <p class="text-muted small mb-0">Don't see your brand? Custom cuts cover everything else.</p>
+    </div>
+  </section>
+
+  <!-- Testimonials -->
+  <section class="py-5" aria-labelledby="testimonials-heading">
+    <div class="container py-lg-3">
+      <p class="eyebrow text-center mb-2">Customer Stories</p>
+      <h2 id="testimonials-heading" class="text-center mb-5">Trusted in kitchens across the country</h2>
+      <div class="row g-4">
+        @for (testimonial of testimonials(); track testimonial.name) {
+          <div class="col-md-4">
+            <figure class="card h-100 testimonial-card shadow-sm p-4 mb-0">
+              <p class="rating mb-2">
+                <span class="text-rating" aria-hidden="true">★★★★★</span>
+                <span class="visually-hidden">Rated 5 out of 5 stars</span>
+              </p>
+              <blockquote class="mb-3 flex-grow-1">
+                <p class="mb-0">“{{ testimonial.quote }}”</p>
+              </blockquote>
+              <figcaption>
+                <span class="fw-bold d-block">{{ testimonial.name }}</span>
+                <span class="text-muted small">{{ testimonial.detail }}</span>
+              </figcaption>
+            </figure>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ teaser -->
+  <section class="py-5 bg-white border-top text-center" aria-labelledby="faq-teaser-heading">
+    <div class="container py-lg-3">
+      <p class="eyebrow mb-2">Good to Know</p>
+      <h2 id="faq-teaser-heading" class="mb-3">Have questions?</h2>
+      <p class="text-muted mx-auto mb-4 faq-teaser-copy">
+        Paint compatibility, measuring for custom cuts, shipping times, bulk orders — the answers live in one place.
+      </p>
+      <a routerLink="/faq" class="btn btn-outline-dark px-4">Read the FAQ</a>
+    </div>
+  </section>
+
+  <!-- Final CTA -->
+  <section class="py-5 bg-navy text-white text-center" aria-labelledby="cta-heading">
+    <div class="container py-lg-3">
+      <h2 id="cta-heading" class="mb-3">Ready to protect your cabinets?</h2>
+      <p class="mx-auto mb-4 opacity-75 cta-copy">
+        Standard sizes ship fast. Custom cuts fit anything. Either way, your cabinets stay flawless.
+      </p>
+      <a routerLink="/shop" class="btn btn-light btn-lg px-5">Shop All Protectors</a>
+    </div>
+  </section>
+</main>

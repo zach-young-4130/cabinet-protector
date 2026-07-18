@@ -1,0 +1,79 @@
+<app-navbar></app-navbar>
+
+<div class="container py-5">
+  <div class="row justify-content-center g-4">
+    <div class="col-lg-6">
+      <div class="card shadow-sm p-4 border-primary">
+        <h1 class="mb-4 fw-bold">Checkout</h1>
+        <p class="mb-4">Complete your order by providing your shipping information. Your cart items will be included in the final summary.</p>
+
+        <form [formGroup]="checkoutForm" (ngSubmit)="submitOrder()" class="needs-validation">
+          <div class="mb-3">
+            <label for="fullName" class="form-label">Full Name</label>
+            <input type="text" id="fullName" formControlName="fullName" class="form-control"
+                   placeholder="Jane Doe" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="email" class="form-label">Email Address</label>
+            <input type="email" id="email" formControlName="email" class="form-control"
+                   placeholder="jane@example.com" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="address" class="form-label">Shipping Address</label>
+            <textarea id="address" formControlName="address" class="form-control" rows="3"
+                      placeholder="Enter your full shipping address..." required></textarea>
+          </div>
+
+          <div class="mb-4">
+            <label for="phoneNumber" class="form-label">Phone Number</label>
+            <input type="tel" id="phoneNumber" formControlName="phoneNumber" class="form-control"
+                   placeholder="+1 (555) 000-0000" required>
+          </div>
+
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary btn-lg py-3" [disabled]="checkoutForm.invalid || items().length === 0">
+              Place Order
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card shadow-sm p-4">
+        <h2 class="h5 mb-3">Order Summary</h2>
+        @if (items().length === 0) {
+          <p class="text-muted mb-0">Your cart is empty.</p>
+        } @else {
+          <ul class="list-group list-group-flush mb-3">
+            @for (item of items(); track item.key) {
+              <li class="list-group-item px-0 d-flex justify-content-between gap-3">
+                <div>
+                  <span class="fw-bold d-block">{{ item.product.name }}</span>
+                  <span class="small d-block">
+                    {{ item.size.label }}
+                    @if (item.size.kind === 'custom') {
+                      <span class="badge text-bg-info ms-1">Custom cut</span>
+                    }
+                  </span>
+                  <span class="small d-block">
+                    <span class="finish-chip" [style.background]="item.finish.hex" aria-hidden="true"></span>
+                    {{ item.finish.label }}
+                  </span>
+                  <span class="text-muted small">Qty: {{ item.quantity }}</span>
+                </div>
+                <span class="fw-bold text-nowrap">${{ unitPrice(item) * item.quantity | number:'1.2-2' }}</span>
+              </li>
+            }
+          </ul>
+          <div class="d-flex justify-content-between align-items-center border-top pt-3">
+            <span class="fw-bold">Total</span>
+            <span class="h5 fw-bold mb-0">${{ totalAmount() | number:'1.2-2' }}</span>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</div>

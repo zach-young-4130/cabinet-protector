@@ -1,0 +1,47 @@
+<app-navbar></app-navbar>
+
+<main>
+  <section class="faq-hero py-5 border-bottom" aria-labelledby="faq-heading">
+    <div class="container py-lg-4 text-center">
+      <p class="eyebrow mb-2">Support</p>
+      <h1 id="faq-heading" class="display-5 fw-bold mb-3">Frequently asked questions</h1>
+      <p class="lead mx-auto mb-0 faq-lead">
+        Everything about fit, paint, custom measurements, shipping, and care.
+        Can't find your answer? The checkout confirmation email reaches a real person.
+      </p>
+    </div>
+  </section>
+
+  <section class="py-5" aria-label="Questions and answers">
+    <div class="container py-lg-3">
+      <div class="row justify-content-center">
+        <div class="col-lg-8">
+          <div class="accordion" id="faqAccordion">
+            @for (faq of faqs(); track faq.q; let i = $index) {
+              <div class="accordion-item">
+                <h2 class="accordion-header" [id]="'faq-heading-' + i">
+                  <button class="accordion-button" [class.collapsed]="i !== 0" type="button"
+                          data-bs-toggle="collapse" [attr.data-bs-target]="'#faq-collapse-' + i"
+                          [attr.aria-expanded]="i === 0" [attr.aria-controls]="'faq-collapse-' + i">
+                    {{ faq.q }}
+                  </button>
+                </h2>
+                <div [id]="'faq-collapse-' + i" class="accordion-collapse collapse" [class.show]="i === 0"
+                     [attr.aria-labelledby]="'faq-heading-' + i" data-bs-parent="#faqAccordion">
+                  <div class="accordion-body text-muted">{{ faq.a }}</div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-5 bg-navy text-white text-center" aria-labelledby="faq-cta-heading">
+    <div class="container py-lg-3">
+      <h2 id="faq-cta-heading" class="mb-3">Ready when you are</h2>
+      <a routerLink="/shop" class="btn btn-light btn-lg px-5">Shop Protectors</a>
+    </div>
+  </section>
+</main>

@@ -1,0 +1,88 @@
+<app-navbar></app-navbar>
+
+<main>
+  <section class="about-hero py-5 border-bottom" aria-labelledby="about-heading">
+    <div class="container py-lg-4">
+      <div class="row justify-content-center text-center">
+        <div class="col-lg-8">
+          <p class="eyebrow mb-2">About ProTectVinyl</p>
+          <h1 id="about-heading" class="display-5 fw-bold mb-3">Cabinet protection that respects your cabinets</h1>
+          <p class="lead mb-0">
+            ProTectVinyl makes paintable, removable barrier strips for the base of floor-length cabinets —
+            the strike zone where wheelchair footrests, walkers, and everyday life chip and scuff doors first.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-5" aria-labelledby="story-heading">
+    <div class="container py-lg-3">
+      <div class="row justify-content-center">
+        <div class="col-lg-8">
+          <p class="eyebrow mb-2">Our Story</p>
+          <h2 id="story-heading" class="mb-3">Started in an accessible kitchen remodel</h2>
+          <p class="text-muted">
+            ProTectVinyl began on an accessible kitchen remodel, when a cabinet installer noticed the same
+            damage in every wheelchair user's home: floor-length cabinet doors chipped and scuffed along the
+            bottom few inches, exactly where footrests and casters strike. Touch-up kits never matched,
+            refinishing cost more than the doors, and nothing on the market could be painted to blend in. So we
+            engineered a 20-mil vinyl barrier strip with a factory-primed surface that takes paint like trim —
+            and peels away clean when you want it gone.
+          </p>
+          <p class="text-muted mb-0">
+            Today we cut barrier strips for kitchens in 48 states: standard sizes matched to the base widths of
+            the cabinet lines national suppliers ship everywhere, and custom cuts for the one-of-a-kind cabinets
+            local shops build. Every order — one base panel or a whole renovation — is cut to within 1/16 of an inch.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-5 bg-white border-top border-bottom" aria-labelledby="values-heading">
+    <div class="container py-lg-3">
+      <p class="eyebrow text-center mb-2">What We Believe</p>
+      <h2 id="values-heading" class="text-center mb-5">Three principles behind every cut</h2>
+      <div class="row g-4">
+        @for (value of values(); track value.title) {
+          <div class="col-md-4">
+            <div class="card h-100 value-card shadow-sm">
+              <div class="card-body p-4">
+                <h3 class="h5">{{ value.title }}</h3>
+                <p class="text-muted mb-0">{{ value.desc }}</p>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="py-5" aria-labelledby="audience-heading">
+    <div class="container py-lg-3">
+      <p class="eyebrow text-center mb-2">Who We Serve</p>
+      <h2 id="audience-heading" class="text-center mb-5">From single doors to entire buildings</h2>
+      <div class="row g-4">
+        @for (audience of audiences(); track audience.title) {
+          <div class="col-md-4">
+            <div class="text-center px-3">
+              <h3 class="h5">{{ audience.title }}</h3>
+              <p class="text-muted mb-0">{{ audience.desc }}</p>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="py-5 bg-navy text-white text-center" aria-labelledby="about-cta-heading">
+    <div class="container py-lg-3">
+      <h2 id="about-cta-heading" class="mb-3">See the protectors for yourself</h2>
+      <div class="d-flex justify-content-center gap-3 flex-wrap">
+        <a routerLink="/shop" class="btn btn-light btn-lg px-4">Shop Protectors</a>
+        <a routerLink="/faq" class="btn btn-outline-light btn-lg px-4">Read the FAQ</a>
+      </div>
+    </div>
+  </section>
+</main>
