@@ -1,59 +1,119 @@
-# EcommerceCabinetProtector
+# ProTectVinyl
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.10.
+E-commerce site for paintable vinyl barrier strips that protect the base of floor-length cabinets — the
+strike zone for wheelchair footrests, walkers, and everyday wear. Customers order standard sizes matched to
+national cabinet brands or custom cuts to their own measurements, in a primed finish, six in-stock
+pre-painted colors, or paint-matched to a Sherwin-Williams code.
 
-## Development server
+Three pieces:
 
-To start a local development server, run:
+| Piece | Where | Stack |
+| --- | --- | --- |
+| Frontend | `src/` | Angular 21 |
+| API | `server/` | Node.js + hapi |
+| Database | PostgreSQL | `protect_vinyl` |
 
-```bash
-ng serve
-```
+Implementation history lives in [docs/implementation-plan.md](docs/implementation-plan.md).
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Frontend (Angular)
 
-## Code scaffolding
+### Technologies & packages
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+- **Angular 21** — NgModule bootstrap (`AppModule`) with standalone routed components
+- **Signals** for state (`CartService`, `ProductService`) and **reactive forms** for the size/finish and checkout forms
+- **TypeScript 5.9**, **SCSS** component styles (global editorial styles in `src/styles.scss`)
+- **Bootstrap 5.3** — loaded via CDN in `src/index.html` (CSS + bundle JS; not an npm dependency)
+- **[sweetalert2](https://sweetalert2.github.io/)** — add-to-cart and order confirmation/error dialogs
+- **RxJS** — HTTP calls and form `valueChanges`
+- **Vitest** via `@angular/build:unit-test` — unit tests (`jsdom` environment)
+- **Prettier** — formatting
 
-```bash
-ng generate component component-name
-```
+### Environment configuration
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+The API base URL comes from `src/environments/`:
 
-```bash
-ng generate --help
-```
+- `environment.development.ts` — `apiUrl: 'http://localhost:3000/api'` (used by `ng serve`; the browser calls
+  the API directly, CORS is enabled server-side)
+- `environment.ts` — `apiUrl: '/api'` (production default: frontend and API behind the same origin)
 
-## Building
+### Commands
 
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
+Run from the repository root:
 
 ```bash
-ng e2e
+npm install              # install frontend dependencies
+npm start                # dev server at http://localhost:4200 (add -- --port 5000 for another port)
+npm run build            # production build to dist/protect-vinyl
+npm run watch            # development build in watch mode
+npm test                 # unit tests (Vitest via the Angular test builder)
+npm run start:api        # convenience: starts the API in server/
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+Note: run tests with `npm test` (the Angular builder provides the Vitest globals) — bare `npx vitest` will fail.
 
-## Additional Resources
+## API (hapi server)
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+### API technologies & packages
+
+- **Node.js** (ESM modules)
+- **[@hapi/hapi](https://hapi.dev/) 21** — HTTP server, CORS enabled
+- **[joi](https://joi.dev/) 17** — payload validation (custom-size ranges, finish kinds, SW paint-code pattern)
+- **[pg](https://node-postgres.com/) 8** — PostgreSQL client (connection pool)
+
+Pricing is computed server-side: product price plus a $15/strip paint-match surcharge. Order payloads are
+validated against the same rules the frontend enforces (custom sizes 6"–96" wide × 2"–24" high, stock color
+ids, `SW ####` paint codes).
+
+### Endpoints
+
+| Method | Path | Description |
+| --- | --- | --- |
+| GET | `/api/health` | liveness + database connectivity |
+| GET | `/api/products` | product catalog with available sizes |
+| GET | `/api/products/{id}` | single product (404 if unknown) |
+| GET | `/api/stock-colors` | the six in-stock pre-painted colors |
+| POST | `/api/orders` | validate, price, and persist an order |
+
+### API commands
+
+Run from `server/`:
+
+```bash
+npm install              # install API dependencies
+npm run db:setup         # create schema + seed products/sizes/colors (idempotent)
+npm start                # API at http://localhost:3000
+npm run smoke            # exercise every route via server.inject (needs a seeded database; no port opened)
+```
+
+## Database (PostgreSQL)
+
+The API uses a local `protect_vinyl` database by default. Override with `DATABASE_URL` or the standard `PG*`
+environment variables.
+
+### Setup
+
+```bash
+createdb protect_vinyl       # once, with PostgreSQL running
+cd server
+npm install
+npm run db:setup             # creates tables and seeds 2 products, 4 sizes, 6 stock colors
+```
+
+`db:setup` is safe to re-run: tables are `CREATE TABLE IF NOT EXISTS` and seeds are upserts. Seed data lives
+in `server/src/data.js`.
+
+### Schema
+
+| Table | Contents |
+| --- | --- |
+| `products` | catalog (name, description, price, feature flags) |
+| `product_sizes` | standard sizes per product |
+| `stock_colors` | in-stock pre-painted finishes |
+| `orders` | placed orders — customer and line items as `jsonb`, server-computed total |
+
+## Running the full stack
+
+1. Start PostgreSQL and complete the database setup above (first run only)
+2. `npm run start:api` — API on **:3000**
+3. `npm start` — Angular on **:4200**
+4. Open the site: shop → product (size + finish) → cart → checkout; orders persist in the `orders` table
