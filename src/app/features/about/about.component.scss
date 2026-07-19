@@ -11,3 +11,75 @@
 .value-card {
   border-top: 3px solid var(--navy);
 }
+
+.audience-section {
+  background:
+    linear-gradient(180deg, rgba(247, 245, 241, 0.55) 0%, #fff 100%);
+}
+
+.audience-intro {
+  max-width: 34rem;
+  margin-inline: auto;
+}
+
+.audience-item {
+  position: relative;
+  padding-top: 0.25rem;
+  transition: transform 0.3s ease;
+
+  &::before {
+    content: '';
+    display: block;
+    width: 2.5rem;
+    height: 3px;
+    margin-bottom: 1.25rem;
+    background: var(--navy);
+    transition: width 0.3s ease;
+  }
+
+  &:hover {
+    transform: translateY(-3px);
+
+    &::before {
+      width: 3.5rem;
+    }
+  }
+}
+
+.audience-index {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--navy);
+  margin-bottom: 0.75rem;
+}
+
+.audience-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+
+.audience-focus {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 0.75rem;
+}
+
+.audience-desc {
+  color: #6c757d;
+  line-height: 1.65;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .audience-item,
+  .audience-item::before {
+    transition: none;
+  }
+
+  .audience-item:hover {
+    transform: none;
+  }
+}

@@ -65,20 +65,30 @@
     </div>
   </section>
 
-  <section class="py-5" aria-labelledby="audience-heading">
+  <section class="audience-section py-5 border-bottom" aria-labelledby="audience-heading">
     <div class="container py-lg-3">
-      <p class="eyebrow text-center mb-2">Who We Serve</p>
-      <h2 id="audience-heading" class="text-center mb-5">From single doors to entire buildings</h2>
-      <div class="row g-4">
-        @for (audience of audiences(); track audience.title) {
-          <div class="col-md-4">
-            <div class="text-center px-3">
-              <h3 class="h5">{{ audience.title }}</h3>
-              <p class="text-muted mb-0">{{ audience.desc }}</p>
-            </div>
-          </div>
-        }
+      <div class="row justify-content-center text-center mb-5">
+        <div class="col-lg-7">
+          <p class="eyebrow mb-2">Who We Serve</p>
+          <h2 id="audience-heading" class="mb-3">From single doors to entire buildings</h2>
+          <p class="text-muted mb-0 audience-intro">
+            Same product, different jobs — whether you're protecting one remodel or specifying a whole floor plan.
+          </p>
+        </div>
       </div>
+
+      <ol class="audience-list row g-4 g-lg-5 list-unstyled mb-0">
+        @for (audience of audiences(); track audience.title; let i = $index) {
+          <li class="col-md-4">
+            <article class="audience-item h-100">
+              <span class="audience-index" aria-hidden="true">{{ i + 1 | number: '2.0-0' }}</span>
+              <h3 class="audience-title">{{ audience.title }}</h3>
+              <p class="audience-focus">{{ audience.focus }}</p>
+              <p class="audience-desc mb-0">{{ audience.desc }}</p>
+            </article>
+          </li>
+        }
+      </ol>
     </div>
   </section>
 

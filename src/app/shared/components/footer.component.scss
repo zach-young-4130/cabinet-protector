@@ -1,6 +1,9 @@
 .site-footer {
   background-color: var(--navy-dark);
   color: #fff;
+  position: relative;
+  bottom: 0;
+  width: 100%;
 }
 
 .footer-muted {

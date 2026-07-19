@@ -19,8 +19,20 @@ export class AboutComponent {
   ]);
 
   audiences = signal([
-    { title: 'Homeowners', desc: 'Protect a new kitchen or an accessible remodel — standard sizes ship fast and install in minutes.' },
-    { title: 'Property managers', desc: 'Keep accessible units turnover-ready. Bulk pricing and repeatable sizing across floor plans.' },
-    { title: 'Cabinet suppliers & shops', desc: 'We maintain base-width sizing charts for national cabinet lines and cut to spec for custom shops, so your installs stay pristine.' }
+    {
+      title: 'Homeowners',
+      focus: 'One kitchen, done right',
+      desc: 'Protect a new kitchen or an accessible remodel — standard sizes ship fast and install in minutes.'
+    },
+    {
+      title: 'Property managers',
+      focus: 'Units that stay turnover-ready',
+      desc: 'Keep accessible units looking new between tenants. Bulk pricing and repeatable sizing across floor plans.'
+    },
+    {
+      title: 'Cabinet suppliers & shops',
+      focus: 'Installs that stay pristine',
+      desc: 'Base-width charts for national cabinet lines, and cut-to-spec for custom shops — so your installs leave looking finished.'
+    }
   ]);
 }
