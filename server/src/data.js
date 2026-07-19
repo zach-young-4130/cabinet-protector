@@ -4,7 +4,15 @@
 export const PAINT_MATCH_FEE = 15;
 export const WIDTH_RANGE = { min: 6, max: 96 };
 export const HEIGHT_RANGE = { min: 2, max: 24 };
-export const SW_CODE_PATTERN = /^(SW[\s-]?)?\d{4}$/i;
+
+// Brands we'll paint-match to. Codes aren't validated against a strict per-brand
+// format here — the frontend already sanity-checks the shape; the server just
+// guards against garbage input (see paintCode schema in server.js).
+export const PAINT_BRANDS = {
+  'sherwin-williams': { name: 'Sherwin-Williams' },
+  'benjamin-moore': { name: 'Benjamin Moore' },
+  'behr': { name: 'Behr' }
+};
 
 export const stockColors = [
   { id: 'alabaster-white', name: 'Alabaster White', hex: '#EDEAE0' },

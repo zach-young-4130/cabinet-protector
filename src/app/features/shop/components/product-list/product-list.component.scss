@@ -3,7 +3,9 @@
 }
 
 .shop-hero {
-  background-color: var(--warm-bg);
+  background:
+    linear-gradient(90deg, rgba(247, 245, 241, 0.96) 0%, rgba(247, 245, 241, 0.88) 45%, rgba(247, 245, 241, 0.45) 100%),
+    url('/images/hero-shop.jpg') center / cover no-repeat;
 }
 
 .shop-lead,

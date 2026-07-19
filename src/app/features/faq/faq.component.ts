@@ -2,16 +2,29 @@ import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { NavbarComponent } from '../../shared/components/navbar.component';
+import { FooterComponent } from '../../shared/components/footer.component';
+import { PAINT_BRANDS } from '../../shared/constants/paint-brands';
+
+interface FaqLink {
+  url: string;
+  text: string;
+}
+
+interface FaqItem {
+  q: string;
+  a: string;
+  links?: FaqLink[];
+}
 
 @Component({
   selector: 'app-faq',
   standalone: true,
-  imports: [CommonModule, RouterLink, NavbarComponent],
+  imports: [CommonModule, RouterLink, NavbarComponent, FooterComponent],
   templateUrl: './faq.component.html',
   styleUrls: ['./faq.component.scss']
 })
 export class FaqComponent {
-  faqs = signal([
+  faqs = signal<FaqItem[]>([
     {
       q: 'Why do the protectors only cover the bottom of the cabinet?',
       a: 'Because that\'s where the damage happens. On floor-length cabinets, wheelchair footrests, walker feet, vacuums, and shoes all strike the first few inches above the floor. A barrier strip across that zone stops chips and scuffs before they reach the door — without wrapping the whole cabinet in vinyl. Think of it as a kick plate you can paint.'
@@ -26,7 +39,8 @@ export class FaqComponent {
     },
     {
       q: 'Can you paint-match my exact color?',
-      a: 'Yes — for Sherwin-Williams colors. Choose "Paint match" under "Choose your finish" and enter the 4-digit SW code from your paint can lid or swatch (e.g., SW 7008 Alabaster). We paint each strip to match before it ships for a $15-per-strip fee; paint-matched orders ship in 3–5 business days. For other paint brands, order primed and paint at home.'
+      a: 'Yes — for Sherwin-Williams, Benjamin Moore, and Behr colors. Choose "Paint match" under "Choose your finish", pick your brand, and enter the code from your paint can lid or swatch (e.g., SW 7008, OC-17, or M290-6). Don\'t have a can handy? Each brand\'s color-finding tool is linked below. We paint each strip to match before it ships for a $15-per-strip fee; paint-matched orders ship in 3–5 business days. For other paint brands, order primed and paint at home.',
+      links: PAINT_BRANDS.map(brand => ({ url: brand.colorToolUrl, text: brand.colorToolLabel }))
     },
     {
       q: 'Will they fit my brand of cabinets?',

@@ -4,11 +4,12 @@ import { RouterLink } from '@angular/router';
 import { ProductService } from '../../../../core/services/product.service';
 import { VinylProtector } from '../../../../core/models/product.model';
 import { NavbarComponent } from '../../../../shared/components/navbar.component';
+import { FooterComponent } from '../../../../shared/components/footer.component';
 
 @Component({
   selector: 'app-product-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, NavbarComponent],
+  imports: [CommonModule, RouterLink, NavbarComponent, FooterComponent],
   templateUrl: './product-list.component.html',
   styleUrls: ['./product-list.component.scss']
 })

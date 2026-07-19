@@ -12,6 +12,7 @@ export interface CartItemSize {
 export interface CartItemFinish {
   id: string;
   kind: 'primed' | 'stock' | 'paint-match';
+  paintBrand?: string;
   paintCode?: string;
   label: string;
   hex: string;

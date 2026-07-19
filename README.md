@@ -3,7 +3,7 @@
 E-commerce site for paintable vinyl barrier strips that protect the base of floor-length cabinets — the
 strike zone for wheelchair footrests, walkers, and everyday wear. Customers order standard sizes matched to
 national cabinet brands or custom cuts to their own measurements, in a primed finish, six in-stock
-pre-painted colors, or paint-matched to a Sherwin-Williams code.
+pre-painted colors, or paint-matched to a Sherwin-Williams, Benjamin Moore, or Behr code.
 
 Three pieces:
 
@@ -57,12 +57,12 @@ Note: run tests with `npm test` (the Angular builder provides the Vitest globals
 
 - **Node.js** (ESM modules)
 - **[@hapi/hapi](https://hapi.dev/) 21** — HTTP server, CORS enabled
-- **[joi](https://joi.dev/) 17** — payload validation (custom-size ranges, finish kinds, SW paint-code pattern)
+- **[joi](https://joi.dev/) 17** — payload validation (custom-size ranges, finish kinds, paint-code shape)
 - **[pg](https://node-postgres.com/) 8** — PostgreSQL client (connection pool)
 
 Pricing is computed server-side: product price plus a $15/strip paint-match surcharge. Order payloads are
 validated against the same rules the frontend enforces (custom sizes 6"–96" wide × 2"–24" high, stock color
-ids, `SW ####` paint codes).
+ids, one of three supported paint brands with a sane paint-code shape).
 
 ### Endpoints
 
@@ -110,6 +110,18 @@ in `server/src/data.js`.
 | `product_sizes` | standard sizes per product |
 | `stock_colors` | in-stock pre-painted finishes |
 | `orders` | placed orders — customer and line items as `jsonb`, server-computed total |
+
+## Image credits
+
+Kitchen photography from [Pexels](https://www.pexels.com), used under the
+[Pexels license](https://www.pexels.com/license/) (free for commercial use, no attribution required):
+
+- `hero-home.jpg` — [pexels.com/photo/8583735](https://www.pexels.com/photo/white-kitchen-cabinets-8583735/)
+- `hero-shop.jpg` — [pexels.com/photo/3623785](https://www.pexels.com/photo/photo-of-kitchen-3623785/)
+- `hero-about.jpg` — [pexels.com/photo/1080721](https://www.pexels.com/photo/kitchen-and-dining-area-1080721/)
+- `hero-faq.jpg` — [pexels.com/photo/19846379](https://www.pexels.com/photo/modern-white-minimalistic-kitchen-with-a-balcony-19846379/)
+- `highlight-floor-length.jpg` — [pexels.com/photo/7147286](https://www.pexels.com/photo/interior-of-minimalist-kitchen-with-wooden-furniture-and-island-7147286/)
+- `about-modern-kitchen.jpg` — [pexels.com/photo/6508358](https://www.pexels.com/photo/modern-kitchen-with-convenient-white-furniture-6508358/)
 
 ## Running the full stack
 

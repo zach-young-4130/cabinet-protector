@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { NavbarComponent } from '../../../shared/components/navbar.component';
+import { FooterComponent } from '../../../shared/components/footer.component';
 import { CartItem, CartService } from '../../../core/services/cart.service';
 import { environment } from '../../../../environments/environment';
 import Swal from 'sweetalert2';
@@ -10,7 +11,7 @@ import Swal from 'sweetalert2';
 @Component({
   selector: 'app-checkout',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, NavbarComponent],
+  imports: [CommonModule, ReactiveFormsModule, NavbarComponent, FooterComponent],
   templateUrl: './checkout.component.html',
   styleUrls: ['./checkout.component.scss']
 })
@@ -53,7 +54,7 @@ export class CheckoutComponent {
           ? { kind: 'primed' }
           : item.finish.kind === 'stock'
             ? { kind: 'stock', colorId: item.finish.id }
-            : { kind: 'paint-match', paintCode: item.finish.paintCode }
+            : { kind: 'paint-match', paintBrand: item.finish.paintBrand, paintCode: item.finish.paintCode }
       }))
     };
 

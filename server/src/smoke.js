@@ -44,7 +44,7 @@ const customer = {
   phoneNumber: '+1 555 000 0000'
 };
 
-await check('create order (standard + stock, custom + paint match)', {
+await check('create order (standard + stock, custom + SW paint match)', {
   method: 'POST',
   url: '/api/orders',
   payload: {
@@ -60,19 +60,47 @@ await check('create order (standard + stock, custom + paint match)', {
         productId: '2',
         quantity: 1,
         size: { kind: 'custom', widthInches: 33.5, heightInches: 6 },
-        finish: { kind: 'paint-match', paintCode: 'SW 7008' }
+        finish: { kind: 'paint-match', paintBrand: 'sherwin-williams', paintCode: 'SW 7008' }
       }
     ]
   }
 }, 201, p => {
   // 2 × $45 + 1 × ($38 + $15 paint match) = $143
   if (p.total !== 143) return `expected total 143, got ${p.total}`;
-  if (p.lines[1].finish.label !== 'Paint match — SW 7008') return `bad finish label: ${p.lines[1].finish.label}`;
+  if (p.lines[1].finish.label !== 'Paint match — Sherwin-Williams SW 7008') return `bad finish label: ${p.lines[1].finish.label}`;
   if (p.lines[1].size.label !== 'Custom — 33.5" × 6"') return `bad size label: ${p.lines[1].size.label}`;
   return null;
 });
 
-await check('reject bad SW code', {
+await check('create order (Benjamin Moore + Behr paint match)', {
+  method: 'POST',
+  url: '/api/orders',
+  payload: {
+    customer,
+    items: [
+      {
+        productId: '1',
+        quantity: 1,
+        size: { kind: 'standard', sizeId: 's1' },
+        finish: { kind: 'paint-match', paintBrand: 'benjamin-moore', paintCode: 'OC-17' }
+      },
+      {
+        productId: '2',
+        quantity: 1,
+        size: { kind: 'standard', sizeId: 's3' },
+        finish: { kind: 'paint-match', paintBrand: 'behr', paintCode: 'M290-6' }
+      }
+    ]
+  }
+}, 201, p => {
+  // ($45 + $15) + ($38 + $15) = $113
+  if (p.total !== 113) return `expected total 113, got ${p.total}`;
+  if (p.lines[0].finish.label !== 'Paint match — Benjamin Moore OC-17') return `bad finish label: ${p.lines[0].finish.label}`;
+  if (p.lines[1].finish.label !== 'Paint match — Behr M290-6') return `bad finish label: ${p.lines[1].finish.label}`;
+  return null;
+});
+
+await check('reject unknown paint brand', {
   method: 'POST',
   url: '/api/orders',
   payload: {
@@ -81,7 +109,21 @@ await check('reject bad SW code', {
       productId: '1',
       quantity: 1,
       size: { kind: 'standard', sizeId: 's1' },
-      finish: { kind: 'paint-match', paintCode: 'BM OC-17' }
+      finish: { kind: 'paint-match', paintBrand: 'valspar', paintCode: 'X123' }
+    }]
+  }
+}, 400);
+
+await check('reject garbage paint code', {
+  method: 'POST',
+  url: '/api/orders',
+  payload: {
+    customer,
+    items: [{
+      productId: '1',
+      quantity: 1,
+      size: { kind: 'standard', sizeId: 's1' },
+      finish: { kind: 'paint-match', paintBrand: 'sherwin-williams', paintCode: '<script>' }
     }]
   }
 }, 400);

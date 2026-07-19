@@ -5,7 +5,7 @@ import {
   PAINT_MATCH_FEE,
   WIDTH_RANGE,
   HEIGHT_RANGE,
-  SW_CODE_PATTERN
+  PAINT_BRANDS
 } from './data.js';
 import {
   pool,
@@ -38,7 +38,8 @@ const finishSchema = Joi.alternatives().try(
   }),
   Joi.object({
     kind: Joi.string().valid('paint-match').required(),
-    paintCode: Joi.string().pattern(SW_CODE_PATTERN).required()
+    paintBrand: Joi.string().valid(...Object.keys(PAINT_BRANDS)).required(),
+    paintCode: Joi.string().trim().min(2).max(24).pattern(/^[A-Za-z0-9\s-]+$/).required()
   })
 );
 
@@ -91,11 +92,16 @@ async function resolveFinish(finish) {
     }
     return { kind: 'stock', label: color.name, colorId: color.id, surcharge: 0 };
   }
-  const swNumber = finish.paintCode.replace(/\D/g, '');
+  const brand = PAINT_BRANDS[finish.paintBrand];
+  if (!brand) {
+    return null;
+  }
+  const code = finish.paintCode.trim();
   return {
     kind: 'paint-match',
-    label: `Paint match — SW ${swNumber}`,
-    paintCode: `SW ${swNumber}`,
+    label: `Paint match — ${brand.name} ${code}`,
+    paintBrand: finish.paintBrand,
+    paintCode: code,
     surcharge: PAINT_MATCH_FEE
   };
 }
@@ -170,7 +176,10 @@ export function buildServer() {
         }
         const finish = await resolveFinish(item.finish);
         if (!finish) {
-          return h.response({ message: `Unknown stock color "${item.finish.colorId}"` }).code(400);
+          const detail = item.finish.kind === 'stock'
+            ? `Unknown stock color "${item.finish.colorId}"`
+            : `Unknown paint brand "${item.finish.paintBrand}"`;
+          return h.response({ message: detail }).code(400);
         }
         const unitPrice = product.price + finish.surcharge;
         lines.push({

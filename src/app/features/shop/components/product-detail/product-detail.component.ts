@@ -1,11 +1,13 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ProductService } from '../../../../core/services/product.service';
 import { VinylProtector } from '../../../../core/models/product.model';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { NavbarComponent } from '../../../../shared/components/navbar.component';
+import { FooterComponent } from '../../../../shared/components/footer.component';
 import { CartService, CartItemSize, CartItemFinish } from '../../../../core/services/cart.service';
+import { PAINT_BRANDS, DEFAULT_PAINT_BRAND_ID, findPaintBrand, PaintBrandId } from '../../../../shared/constants/paint-brands';
 import Swal from 'sweetalert2';
 
 export const PRIMED_FINISH: CartItemFinish = {
@@ -18,16 +20,13 @@ export const PRIMED_FINISH: CartItemFinish = {
 
 export const PAINT_MATCH_FEE = 15;
 
-// e.g. "SW 7008", "sw7008", "7008"
-const SW_CODE_PATTERN = /^(SW[\s-]?)?\d{4}$/i;
-
 const WIDTH_RANGE = { min: 6, max: 96 };
 const HEIGHT_RANGE = { min: 2, max: 24 };
 
 @Component({
   selector: 'app-product-detail',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, NavbarComponent, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, NavbarComponent, FooterComponent, RouterLink],
   templateUrl: './product-detail.component.html',
   styleUrls: ['./product-detail.component.scss']
 })
@@ -37,13 +36,14 @@ export class ProductDetailComponent implements OnInit {
   private cartService = inject(CartService);
   private fb = inject(FormBuilder);
 
-  product?: VinylProtector;
-  notFound = false;
+  product = signal<VinylProtector | undefined>(undefined);
+  notFound = signal(false);
 
   readonly widthRange = WIDTH_RANGE;
   readonly heightRange = HEIGHT_RANGE;
   readonly primedFinish = PRIMED_FINISH;
   readonly paintMatchFee = PAINT_MATCH_FEE;
+  readonly paintBrands = PAINT_BRANDS;
 
   stockColors = this.productService.stockColors;
 
@@ -53,27 +53,29 @@ export class ProductDetailComponent implements OnInit {
     customWidth: [null as number | null],
     customHeight: [null as number | null],
     finishId: this.fb.nonNullable.control('primed', Validators.required),
+    paintBrand: this.fb.nonNullable.control<PaintBrandId>(DEFAULT_PAINT_BRAND_ID),
     paintCode: ['']
   });
 
   constructor() {
     this.sizeForm.controls.mode.valueChanges.subscribe(mode => this.applyModeValidators(mode));
-    this.sizeForm.controls.finishId.valueChanges.subscribe(finishId => this.applyFinishValidators(finishId));
+    this.sizeForm.controls.finishId.valueChanges.subscribe(() => this.applyFinishValidators());
+    this.sizeForm.controls.paintBrand.valueChanges.subscribe(() => this.applyFinishValidators());
   }
 
   ngOnInit(): void {
     this.route.params.subscribe(params => {
       const id = params['id'];
       if (id) {
-        this.notFound = false;
+        this.notFound.set(false);
         this.productService.getProduct(id).subscribe({
           next: product => {
-            this.product = product;
+            this.product.set(product);
             this.sizeForm.patchValue({ standardSizeId: product.availableSizes[0]?.id ?? '' });
           },
           error: () => {
-            this.product = undefined;
-            this.notFound = true;
+            this.product.set(undefined);
+            this.notFound.set(true);
           }
         });
       }
@@ -88,8 +90,13 @@ export class ProductDetailComponent implements OnInit {
     return this.sizeForm.controls.finishId.value === 'paint-match';
   }
 
+  get selectedPaintBrand() {
+    return findPaintBrand(this.sizeForm.controls.paintBrand.value);
+  }
+
   addToCart() {
-    if (!this.product) {
+    const product = this.product();
+    if (!product) {
       return;
     }
     if (this.sizeForm.invalid) {
@@ -99,10 +106,10 @@ export class ProductDetailComponent implements OnInit {
 
     const size = this.selectedSize();
     const finish = this.selectedFinish();
-    this.cartService.addToCart(this.product, size, finish);
+    this.cartService.addToCart(product, size, finish);
     Swal.fire({
       title: 'Added to cart',
-      text: `${this.product.name} (${size.label}, ${finish.label}) has been added to your cart.`,
+      text: `${product.name} (${size.label}, ${finish.label}) has been added to your cart.`,
       icon: 'success',
       confirmButtonText: 'Continue shopping'
     });
@@ -110,17 +117,19 @@ export class ProductDetailComponent implements OnInit {
 
   // Public: the template uses it to live-preview the selected finish color
   selectedFinish(): CartItemFinish {
-    const { finishId, paintCode } = this.sizeForm.getRawValue();
+    const { finishId, paintBrand, paintCode } = this.sizeForm.getRawValue();
     if (finishId === 'primed') {
       return PRIMED_FINISH;
     }
     if (finishId === 'paint-match') {
-      const swNumber = (paintCode ?? '').replace(/\D/g, '');
+      const brand = findPaintBrand(paintBrand);
+      const code = (paintCode ?? '').trim();
       return {
-        id: `sw-${swNumber}`,
+        id: `${brand.id}-${code}`,
         kind: 'paint-match',
-        paintCode: `SW ${swNumber}`,
-        label: `Paint match — SW ${swNumber}`,
+        paintBrand: brand.id,
+        paintCode: code,
+        label: `Paint match — ${brand.name} ${code}`,
         hex: PRIMED_FINISH.hex,
         surcharge: PAINT_MATCH_FEE
       };
@@ -129,10 +138,10 @@ export class ProductDetailComponent implements OnInit {
     return { id: color.id, kind: 'stock', label: color.name, hex: color.hex, surcharge: 0 };
   }
 
-  private applyFinishValidators(finishId: string) {
-    const { paintCode } = this.sizeForm.controls;
-    if (finishId === 'paint-match') {
-      paintCode.setValidators([Validators.required, Validators.pattern(SW_CODE_PATTERN)]);
+  private applyFinishValidators() {
+    const { finishId, paintCode } = this.sizeForm.controls;
+    if (finishId.value === 'paint-match') {
+      paintCode.setValidators([Validators.required, Validators.pattern(this.selectedPaintBrand.codePattern)]);
     } else {
       paintCode.clearValidators();
     }
@@ -142,7 +151,7 @@ export class ProductDetailComponent implements OnInit {
   private selectedSize(): CartItemSize {
     const value = this.sizeForm.getRawValue();
     if (value.mode === 'standard') {
-      const standard = this.product!.availableSizes.find(s => s.id === value.standardSizeId)!;
+      const standard = this.product()!.availableSizes.find(s => s.id === value.standardSizeId)!;
       return {
         kind: 'standard',
         sizeId: standard.id,

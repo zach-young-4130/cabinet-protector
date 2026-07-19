@@ -2,12 +2,13 @@ import { Component, inject, signal }  from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { NavbarComponent } from '../../shared/components/navbar.component';
+import { FooterComponent } from '../../shared/components/footer.component';
 import { ProductService } from '../../core/services/product.service';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterLink, NavbarComponent],
+  imports: [CommonModule, RouterLink, NavbarComponent, FooterComponent],
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss']
 })

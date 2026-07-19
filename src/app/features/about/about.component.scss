@@ -3,7 +3,9 @@
 }
 
 .about-hero {
-  background-color: var(--warm-bg);
+  background:
+    linear-gradient(rgba(247, 245, 241, 0.93), rgba(247, 245, 241, 0.53)),
+    url('/images/hero-about.jpg') center / cover no-repeat;
 }
 
 .value-card {

@@ -1,7 +1,7 @@
 <app-navbar></app-navbar>
 
 <main>
-  @if (product) {
+  @if (product(); as product) {
     <section class="detail-hero py-4 border-bottom" aria-labelledby="product-heading">
       <div class="container py-lg-3">
         <nav aria-label="Breadcrumb" class="mb-3">
@@ -34,7 +34,7 @@
               </div>
               <figcaption class="text-muted small mt-2">
                 @if (selectedFinish().kind === 'paint-match') {
-                  Shown primed — painted to match your Sherwin-Williams color before shipping
+                  Shown primed — painted to match your {{ selectedPaintBrand.name }} color before shipping
                 } @else {
                   Shown in {{ selectedFinish().label }}
                 }
@@ -182,23 +182,39 @@
                   <input class="form-check-input" type="radio" id="finish-paint-match"
                          formControlName="finishId" value="paint-match">
                   <label class="form-check-label" for="finish-paint-match">
-                    Paint match — your Sherwin-Williams color
+                    Paint match — Sherwin-Williams, Benjamin Moore, or Behr
                     <span class="badge text-bg-info ms-1">+${{ paintMatchFee | number:'1.2-2' }}/strip</span>
                   </label>
                   <p class="form-text mb-0">
-                    Send us your Sherwin-Williams paint code and we paint each strip to match before it ships.
-                    Sherwin-Williams colors only.
+                    Send us your paint code and we paint each strip to match before it ships.
                   </p>
                   @if (isPaintMatch) {
                     <div class="mt-2">
-                      <label class="form-label" for="paintCode">Sherwin-Williams paint code</label>
+                      <span class="form-label d-block">Paint brand</span>
+                      <div class="btn-group mb-2 flex-wrap" role="group" aria-label="Select your paint brand">
+                        @for (brand of paintBrands; track brand.id) {
+                          <input type="radio" class="btn-check" [id]="'brand-' + brand.id"
+                                 formControlName="paintBrand" [value]="brand.id" autocomplete="off"
+                                 [attr.aria-label]="brand.name">
+                          <label class="btn btn-outline-secondary btn-sm" [for]="'brand-' + brand.id">{{ brand.name }}</label>
+                        }
+                      </div>
+
+                      <label class="form-label d-block" for="paintCode">{{ selectedPaintBrand.codeLabel }}</label>
                       <input type="text" id="paintCode" class="form-control" formControlName="paintCode"
-                             placeholder="SW 7008" autocomplete="off"
+                             [placeholder]="selectedPaintBrand.placeholder" autocomplete="off"
                              [class.is-invalid]="sizeForm.controls.paintCode.touched && sizeForm.controls.paintCode.invalid">
-                      <div class="form-text">The 4-digit SW number on your paint can lid or swatch (e.g., SW 7008 Alabaster).</div>
+                      <div class="form-text">
+                        {{ selectedPaintBrand.helpText }}
+                        Don't have it handy?
+                        <a [href]="selectedPaintBrand.colorToolUrl" target="_blank" rel="noopener">
+                          {{ selectedPaintBrand.colorToolLabel }}
+                          <span class="visually-hidden"> (opens in new tab)</span>
+                        </a>
+                      </div>
                       @if (sizeForm.controls.paintCode.touched && sizeForm.controls.paintCode.invalid) {
                         <div class="invalid-feedback" role="alert">
-                          Enter a valid Sherwin-Williams code like SW 7008.
+                          Enter a valid {{ selectedPaintBrand.name }} code like "{{ selectedPaintBrand.placeholder }}".
                         </div>
                       }
                     </div>
@@ -222,7 +238,7 @@
         </div>
       </div>
     </section>
-  } @else if (notFound) {
+  } @else if (notFound()) {
     <div class="container py-5">
       <div class="text-center py-5">
         <h1 class="h3 mb-3">We couldn't find that product</h1>
@@ -238,3 +254,5 @@
     </div>
   }
 </main>
+
+<app-footer></app-footer>

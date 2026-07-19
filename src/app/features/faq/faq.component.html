@@ -28,7 +28,21 @@
                 </h2>
                 <div [id]="'faq-collapse-' + i" class="accordion-collapse collapse" [class.show]="i === 0"
                      [attr.aria-labelledby]="'faq-heading-' + i" data-bs-parent="#faqAccordion">
-                  <div class="accordion-body text-muted">{{ faq.a }}</div>
+                  <div class="accordion-body text-muted">
+                    {{ faq.a }}
+                    @if (faq.links) {
+                      <ul class="list-unstyled mt-2 mb-0">
+                        @for (link of faq.links; track link.url) {
+                          <li>
+                            <a [href]="link.url" target="_blank" rel="noopener">
+                              {{ link.text }}
+                              <span class="visually-hidden"> (opens in new tab)</span>
+                            </a>
+                          </li>
+                        }
+                      </ul>
+                    }
+                  </div>
                 </div>
               </div>
             }
@@ -45,3 +59,5 @@
     </div>
   </section>
 </main>
+
+<app-footer></app-footer>

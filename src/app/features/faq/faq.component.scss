@@ -3,7 +3,9 @@
 }
 
 .faq-hero {
-  background-color: var(--warm-bg);
+  background:
+    linear-gradient(rgba(247, 245, 241, 0.93), rgba(247, 245, 241, 0.9)),
+    url('/images/hero-faq.jpg') center / cover no-repeat;
 }
 
 .faq-lead {

@@ -102,6 +102,18 @@ via upserts. Catalog GETs query live; order POSTs validate ids against the datab
 `DATABASE_URL` or standard `PG*` env vars, defaulting to local database `protect_vinyl`. `/api/health` now
 reports database connectivity, and the smoke test requires a running, seeded database.
 
+### Multi-Brand Paint Match (2026-07-19)
+Paint matching now supports Sherwin-Williams, Benjamin Moore, and Behr, not just SW. `PAINT_BRANDS` in
+`src/app/shared/constants/paint-brands.ts` is the single source (name, code placeholder/help text, a verified
+official color-tool URL per brand, and a loose sanity-check code pattern); the product page's paint-match
+option now shows a brand picker that switches the code label, placeholder, validation, and "find your code"
+link. `CartItemFinish` gained `paintBrand`, carried through cart, checkout, and the order payload. Server-side,
+`PAINT_BRANDS` in `server/src/data.js` mirrors the three brand names for pricing/labels; joi validates
+`paintBrand` against the known set and `paintCode` as a generic alnum/hyphen shape (2–24 chars) rather than a
+brand-specific pattern, since the server's job is sanity-checking and correct pricing, not exact format
+enforcement. FAQ, home, and shop copy updated to mention all three brands; the FAQ's paint-match answer links
+to all three brands' official color-finding tools.
+
 ### Progress Tracking
 - [x] CartService size support
 - [x] Product detail size selection UI
