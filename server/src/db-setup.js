@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { pool } from './db.js';
 import { products, stockColors } from './data.js';
 
@@ -37,8 +38,20 @@ await pool.query(`
     created_at timestamptz NOT NULL DEFAULT now(),
     customer jsonb NOT NULL,
     lines jsonb NOT NULL,
-    total numeric(10,2) NOT NULL
+    subtotal numeric(10,2) NOT NULL DEFAULT 0,
+    coupon_code text,
+    discount_amount numeric(10,2) NOT NULL DEFAULT 0,
+    total numeric(10,2) NOT NULL,
+    status text NOT NULL DEFAULT 'pending',
+    stripe_payment_intent_id text
   );
+
+  ALTER TABLE orders ADD COLUMN IF NOT EXISTS subtotal numeric(10,2) NOT NULL DEFAULT 0;
+  ALTER TABLE orders ADD COLUMN IF NOT EXISTS coupon_code text;
+  ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_amount numeric(10,2) NOT NULL DEFAULT 0;
+  ALTER TABLE orders ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'pending';
+  ALTER TABLE orders ADD COLUMN IF NOT EXISTS stripe_payment_intent_id text;
+  ALTER TABLE orders ADD COLUMN IF NOT EXISTS stripe_checkout_session_id text;
 `);
 
 for (const product of products) {

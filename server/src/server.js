@@ -13,8 +13,23 @@ import {
   getProduct,
   getStockColors,
   getStockColor,
-  insertOrder
+  insertOrder,
+  getOrder,
+  finalizePaidOrder
 } from './db.js';
+import {
+  createCheckoutSession,
+  retrieveCheckoutSession,
+  customerFromCheckoutSession,
+  discountFromCheckoutSession
+} from './stripe.js';
+
+class OrderValidationError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'OrderValidationError';
+  }
+}
 
 const sizeSchema = Joi.alternatives().try(
   Joi.object({
@@ -43,21 +58,19 @@ const finishSchema = Joi.alternatives().try(
   })
 );
 
-const orderSchema = Joi.object({
-  customer: Joi.object({
-    fullName: Joi.string().min(1).max(200).required(),
-    email: Joi.string().email().required(),
-    address: Joi.string().min(1).max(1000).required(),
-    phoneNumber: Joi.string().min(7).max(30).required()
-  }).required(),
-  items: Joi.array().items(
-    Joi.object({
-      productId: Joi.string().required(),
-      quantity: Joi.number().integer().min(1).max(500).required(),
-      size: sizeSchema.required(),
-      finish: finishSchema.required()
-    })
-  ).min(1).required()
+const itemsSchema = Joi.array().items(
+  Joi.object({
+    productId: Joi.string().required(),
+    quantity: Joi.number().integer().min(1).max(500).required(),
+    size: sizeSchema.required(),
+    finish: finishSchema.required()
+  })
+).min(1).required();
+
+// Customer details are collected by Stripe Elements (Contact + Address), so the
+// session create payload only needs the cart lines.
+const checkoutSessionSchema = Joi.object({
+  items: itemsSchema
 });
 
 function resolveSize(product, size) {
@@ -104,6 +117,74 @@ async function resolveFinish(finish) {
     paintCode: code,
     surcharge: PAINT_MATCH_FEE
   };
+}
+
+// Shared pricing — resolves every cart line against the live catalog.
+// Client-sent prices are never trusted.
+async function buildOrderLines(items) {
+  const lines = [];
+  for (const item of items) {
+    const product = await getProduct(item.productId);
+    if (!product) {
+      throw new OrderValidationError(`Unknown product "${item.productId}"`);
+    }
+    const size = resolveSize(product, item.size);
+    if (!size) {
+      throw new OrderValidationError(`Unknown size "${item.size.sizeId}" for product "${product.id}"`);
+    }
+    const finish = await resolveFinish(item.finish);
+    if (!finish) {
+      const detail = item.finish.kind === 'stock'
+        ? `Unknown stock color "${item.finish.colorId}"`
+        : `Unknown paint brand "${item.finish.paintBrand}"`;
+      throw new OrderValidationError(detail);
+    }
+    const unitPrice = product.price + finish.surcharge;
+    lines.push({
+      productId: product.id,
+      productName: product.name,
+      size,
+      finish,
+      quantity: item.quantity,
+      unitPrice,
+      lineTotal: unitPrice * item.quantity
+    });
+  }
+  const subtotal = lines.reduce((sum, line) => sum + line.lineTotal, 0);
+  return { lines, subtotal };
+}
+
+function toStripeLineItems(lines) {
+  return lines.map(line => ({
+    quantity: line.quantity,
+    price_data: {
+      currency: 'usd',
+      unit_amount: Math.round(line.unitPrice * 100),
+      product_data: {
+        name: `${line.productName} — ${line.size.label}`,
+        description: line.finish.label,
+        metadata: {
+          productId: line.productId,
+          sizeKind: line.size.kind
+        }
+      }
+    }
+  }));
+}
+
+function checkoutReturnUrl(orderId) {
+  const base = (process.env.CHECKOUT_RETURN_URL || 'http://localhost:4200/checkout').replace(/\/$/, '');
+  return `${base}?orderId=${orderId}&session_id={CHECKOUT_SESSION_ID}`;
+}
+
+function handleCheckoutError(h, err) {
+  if (err instanceof OrderValidationError) {
+    return h.response({ message: err.message }).code(400);
+  }
+  if (err?.code === 'STRIPE_NOT_CONFIGURED') {
+    return h.response({ message: 'Payments are not configured on this server yet.' }).code(500);
+  }
+  throw err;
 }
 
 export function buildServer() {
@@ -153,54 +234,102 @@ export function buildServer() {
     handler: () => getStockColors()
   });
 
+  // Creates a pending order + Stripe Checkout Session (ui_mode: elements).
+  // Contact, address, payment, and coupons are all collected by Stripe Elements.
   server.route({
     method: 'POST',
-    path: '/api/orders',
+    path: '/api/checkout/session',
+    options: { validate: { payload: checkoutSessionSchema } },
+    handler: async (request, h) => {
+      try {
+        const { items } = request.payload;
+        const { lines, subtotal } = await buildOrderLines(items);
+        const subtotalCents = Math.round(subtotal * 100);
+        if (subtotalCents < 50) {
+          throw new OrderValidationError('Order total is too low to charge. Please adjust your cart.');
+        }
+
+        const orderId = randomUUID();
+        const session = await createCheckoutSession({
+          lineItems: toStripeLineItems(lines),
+          orderId,
+          returnUrl: checkoutReturnUrl(orderId)
+        });
+
+        const order = await insertOrder({
+          id: orderId,
+          // Filled in from Stripe Elements once the session is paid.
+          customer: { fullName: '', email: '', address: '', phoneNumber: '' },
+          lines,
+          subtotal,
+          discountAmount: 0,
+          total: subtotal,
+          status: 'pending',
+          stripeCheckoutSessionId: session.id
+        });
+
+        return h.response({
+          orderId: order.id,
+          clientSecret: session.client_secret,
+          subtotal: order.subtotal,
+          total: order.total
+        }).code(201);
+      } catch (err) {
+        return handleCheckoutError(h, err);
+      }
+    }
+  });
+
+  // Called after Checkout Elements confirm. We re-fetch the Checkout Session
+  // from Stripe and only mark the order paid when payment_status is "paid".
+  server.route({
+    method: 'POST',
+    path: '/api/checkout/{orderId}/confirm',
     options: {
-      validate: { payload: orderSchema }
+      validate: {
+        params: Joi.object({ orderId: Joi.string().guid().required() })
+      }
     },
     handler: async (request, h) => {
-      const { customer, items } = request.payload;
-
-      const lines = [];
-      for (const item of items) {
-        const product = await getProduct(item.productId);
-        if (!product) {
-          return h.response({ message: `Unknown product "${item.productId}"` }).code(400);
+      try {
+        const order = await getOrder(request.params.orderId);
+        if (!order) {
+          return h.response({ message: 'Order not found' }).code(404);
         }
-        const size = resolveSize(product, item.size);
-        if (!size) {
+        if (order.status === 'paid') {
+          return order;
+        }
+        if (!order.stripeCheckoutSessionId) {
+          return h.response({ message: 'Order has no associated checkout session' }).code(409);
+        }
+
+        const session = await retrieveCheckoutSession(order.stripeCheckoutSessionId);
+        if (session.status !== 'complete' || session.payment_status !== 'paid') {
           return h.response({
-            message: `Unknown size "${item.size.sizeId}" for product "${product.id}"`
-          }).code(400);
+            message: 'Payment has not completed yet',
+            status: session.status,
+            paymentStatus: session.payment_status
+          }).code(409);
         }
-        const finish = await resolveFinish(item.finish);
-        if (!finish) {
-          const detail = item.finish.kind === 'stock'
-            ? `Unknown stock color "${item.finish.colorId}"`
-            : `Unknown paint brand "${item.finish.paintBrand}"`;
-          return h.response({ message: detail }).code(400);
-        }
-        const unitPrice = product.price + finish.surcharge;
-        lines.push({
-          productId: product.id,
-          productName: product.name,
-          size,
-          finish,
-          quantity: item.quantity,
-          unitPrice,
-          lineTotal: unitPrice * item.quantity
+
+        const customer = customerFromCheckoutSession(session);
+        const { discountAmount, couponCode } = discountFromCheckoutSession(session);
+        const total = (session.amount_total ?? Math.round(order.subtotal * 100)) / 100;
+        const paymentIntentId = typeof session.payment_intent === 'string'
+          ? session.payment_intent
+          : session.payment_intent?.id ?? null;
+
+        const paidOrder = await finalizePaidOrder(order.id, {
+          customer,
+          couponCode,
+          discountAmount,
+          total,
+          stripePaymentIntentId: paymentIntentId
         });
+        return paidOrder ?? order;
+      } catch (err) {
+        return handleCheckoutError(h, err);
       }
-
-      const order = await insertOrder({
-        id: randomUUID(),
-        customer,
-        lines,
-        total: lines.reduce((sum, line) => sum + line.lineTotal, 0)
-      });
-
-      return h.response(order).code(201);
     }
   });
 

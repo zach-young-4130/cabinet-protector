@@ -3,42 +3,120 @@
 <main>
 <div class="container py-5">
   <div class="row justify-content-center g-4">
-    <div class="col-lg-6">
+    <div class="col-lg-7">
       <div class="card shadow-sm p-4 border-primary">
-        <h1 class="mb-4 fw-bold">Checkout</h1>
-        <p class="mb-4">Complete your order by providing your shipping information. Your cart items will be included in the final summary.</p>
+        <h1 class="mb-2 fw-bold">Checkout</h1>
+        <p class="text-muted mb-4">
+          Pay securely with Stripe — contact, shipping, billing, and payment are all collected with Stripe Elements.
+        </p>
 
-        <form [formGroup]="checkoutForm" (ngSubmit)="submitOrder()" class="needs-validation">
-          <div class="mb-3">
-            <label for="fullName" class="form-label">Full Name</label>
-            <input type="text" id="fullName" formControlName="fullName" class="form-control"
-                   placeholder="Jane Doe" required>
-          </div>
+        @if (items().length === 0) {
+          <p class="text-muted mb-0">Your cart is empty. Add protectors from the shop to check out.</p>
+        } @else {
+          @if (sessionLoading() && !elementsReady()) {
+            <p class="text-muted mb-0" role="status">Preparing secure checkout…</p>
+          }
 
-          <div class="mb-3">
-            <label for="email" class="form-label">Email Address</label>
-            <input type="email" id="email" formControlName="email" class="form-control"
-                   placeholder="jane@example.com" required>
-          </div>
+          @if (sessionError()) {
+            <p class="text-danger mb-3">{{ sessionError() }}</p>
+          }
 
-          <div class="mb-3">
-            <label for="address" class="form-label">Shipping Address</label>
-            <textarea id="address" formControlName="address" class="form-control" rows="3"
-                      placeholder="Enter your full shipping address..." required></textarea>
-          </div>
+          <div class="checkout-elements" [class.checkout-elements-loading]="!elementsReady()">
+            <section class="checkout-section" aria-labelledby="express-heading">
+              <h2 id="express-heading" class="h6 text-uppercase text-muted mb-3">Express checkout</h2>
+              <div #expressCheckoutContainer class="stripe-element-slot"></div>
+            </section>
 
-          <div class="mb-4">
-            <label for="phoneNumber" class="form-label">Phone Number</label>
-            <input type="tel" id="phoneNumber" formControlName="phoneNumber" class="form-control"
-                   placeholder="+1 (555) 000-0000" required>
-          </div>
+            <div class="checkout-divider my-4"><span>Or pay with card</span></div>
 
-          <div class="d-grid gap-2">
-            <button type="submit" class="btn btn-primary btn-lg py-3" [disabled]="checkoutForm.invalid || items().length === 0">
-              Place Order
-            </button>
+            <section class="checkout-section mb-4" aria-labelledby="contact-heading">
+              <h2 id="contact-heading" class="h6 text-uppercase text-muted mb-3">Contact</h2>
+              <div #contactDetailsContainer class="stripe-element-slot mb-3"></div>
+              <label for="individualName" class="form-label">Full name</label>
+              <input
+                type="text"
+                id="individualName"
+                class="form-control mb-3"
+                placeholder="Jane Doe"
+                [formControl]="individualNameControl"
+                autocomplete="name">
+              @if (individualNameControl.touched && individualNameControl.invalid) {
+                <p class="text-danger small mt-1 mb-3">Enter your full name.</p>
+              }
+              <label for="phoneNumber" class="form-label">Phone number</label>
+              <input
+                type="tel"
+                id="phoneNumber"
+                class="form-control"
+                placeholder="+1 (555) 000-0000"
+                [formControl]="phoneControl"
+                autocomplete="tel">
+              @if (phoneControl.touched && phoneControl.invalid) {
+                <p class="text-danger small mt-1 mb-0">Enter a valid phone number (at least 7 digits).</p>
+              }
+            </section>
+
+            <section class="checkout-section mb-4" aria-labelledby="shipping-heading">
+              <h2 id="shipping-heading" class="h6 text-uppercase text-muted mb-3">Shipping address</h2>
+              <div #shippingAddressContainer class="stripe-element-slot"></div>
+            </section>
+
+            <section class="checkout-section mb-4" aria-labelledby="billing-heading">
+              <h2 id="billing-heading" class="h6 text-uppercase text-muted mb-3">Billing address</h2>
+              <div #billingAddressContainer class="stripe-element-slot"></div>
+            </section>
+
+            <section class="checkout-section mb-4" aria-labelledby="payment-heading">
+              <h2 id="payment-heading" class="h6 text-uppercase text-muted mb-3">Payment</h2>
+              <div #paymentElementContainer class="stripe-element-slot payment-element-container"></div>
+            </section>
+
+            <section class="checkout-section mb-4" aria-labelledby="coupon-heading">
+              <h2 id="coupon-heading" class="h6 text-uppercase text-muted mb-3">Coupon code</h2>
+              @if (displayCouponCode(); as code) {
+                <div class="coupon-applied d-flex justify-content-between align-items-center">
+                  <div>
+                    <span class="badge text-bg-success me-2">{{ code }}</span>
+                    @if (totals()?.couponDescription; as desc) {
+                      <span class="small text-muted">{{ desc }}</span>
+                    }
+                  </div>
+                  <button type="button" class="btn btn-link btn-sm p-0" (click)="removeCoupon()"
+                          [disabled]="processingPayment()">Remove</button>
+                </div>
+              } @else {
+                <div class="input-group">
+                  <input type="text" id="couponCode" class="form-control" placeholder="Enter Stripe promotion code"
+                         [formControl]="couponCodeControl"
+                         (keydown.enter)="$event.preventDefault(); applyCoupon()">
+                  <button type="button" class="btn btn-outline-primary" (click)="applyCoupon()"
+                          [disabled]="!couponCodeControl.value.trim() || couponStatus() === 'checking' || !elementsReady()">
+                    {{ couponStatus() === 'checking' ? 'Checking…' : 'Apply' }}
+                  </button>
+                </div>
+                @if (couponStatus() === 'error') {
+                  <p class="text-danger small mt-2 mb-0">{{ couponError() }}</p>
+                }
+              }
+            </section>
+
+            @if (paymentError()) {
+              <p class="text-danger small mb-3">{{ paymentError() }}</p>
+            }
+
+            <div class="d-grid">
+              <button type="button" class="btn btn-primary btn-lg py-3" (click)="pay()"
+                      [disabled]="!canPay()">
+                {{ processingPayment() ? 'Processing…' : 'Pay ' + displayTotalLabel() }}
+              </button>
+              @if (elementsReady() && !processingPayment()) {
+                <p class="text-muted small text-center mt-2 mb-0">
+                  Complete every required field above, then click Pay — Stripe will highlight anything missing.
+                </p>
+              }
+            </div>
           </div>
-        </form>
+        }
       </div>
     </div>
 
@@ -70,8 +148,18 @@
             }
           </ul>
           <div class="d-flex justify-content-between align-items-center border-top pt-3">
+            <span class="text-muted">Subtotal</span>
+            <span>${{ displaySubtotal() | number:'1.2-2' }}</span>
+          </div>
+          @if (displayDiscount() > 0) {
+            <div class="d-flex justify-content-between align-items-center text-success">
+              <span>Discount{{ displayCouponCode() ? ' (' + displayCouponCode() + ')' : '' }}</span>
+              <span>&minus;${{ displayDiscount() | number:'1.2-2' }}</span>
+            </div>
+          }
+          <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-2">
             <span class="fw-bold">Total</span>
-            <span class="h5 fw-bold mb-0">${{ totalAmount() | number:'1.2-2' }}</span>
+            <span class="h5 fw-bold mb-0">${{ displayTotal() | number:'1.2-2' }}</span>
           </div>
         }
       </div>

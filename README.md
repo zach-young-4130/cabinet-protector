@@ -24,6 +24,8 @@ Implementation history lives in [docs/implementation-plan.md](docs/implementatio
 - **TypeScript 5.9**, **SCSS** component styles (global editorial styles in `src/styles.scss`)
 - **Bootstrap 5.3** — loaded via CDN in `src/index.html` (CSS + bundle JS; not an npm dependency)
 - **[sweetalert2](https://sweetalert2.github.io/)** — add-to-cart and order confirmation/error dialogs
+- **[@stripe/stripe-js](https://github.com/stripe/stripe-js)** — loads Stripe.js v3; powers the custom Payment
+  Element checkout in `CheckoutComponent`
 - **RxJS** — HTTP calls and form `valueChanges`
 - **Vitest** via `@angular/build:unit-test` — unit tests (`jsdom` environment)
 - **Prettier** — formatting
@@ -35,6 +37,9 @@ The API base URL comes from `src/environments/`:
 - `environment.development.ts` — `apiUrl: 'http://localhost:3000/api'` (used by `ng serve`; the browser calls
   the API directly, CORS is enabled server-side)
 - `environment.ts` — `apiUrl: '/api'` (production default: frontend and API behind the same origin)
+
+Both files also have a `stripePublishableKey`. Publishable keys aren't secret — replace the `pk_test_...`
+placeholder with your own from the [Stripe test API keys page](https://dashboard.stripe.com/test/apikeys).
 
 ### Commands
 
@@ -59,10 +64,15 @@ Note: run tests with `npm test` (the Angular builder provides the Vitest globals
 - **[@hapi/hapi](https://hapi.dev/) 21** — HTTP server, CORS enabled
 - **[joi](https://joi.dev/) 17** — payload validation (custom-size ranges, finish kinds, paint-code shape)
 - **[pg](https://node-postgres.com/) 8** — PostgreSQL client (connection pool)
+- **[stripe](https://github.com/stripe/stripe-node)** — Node SDK; creates PaymentIntents and looks up
+  Promotion Codes
+- **[dotenv](https://github.com/motdotla/dotenv)** — loads `server/.env` (`STRIPE_SECRET_KEY`, etc.)
 
 Pricing is computed server-side: product price plus a $15/strip paint-match surcharge. Order payloads are
 validated against the same rules the frontend enforces (custom sizes 6"–96" wide × 2"–24" high, stock color
-ids, one of three supported paint brands with a sane paint-code shape).
+ids, one of three supported paint brands with a sane paint-code shape). Client-sent prices/discounts are
+never trusted — every checkout route re-derives the subtotal from the live product catalog and, when a
+coupon is present, from Stripe itself.
 
 ### Endpoints
 
@@ -72,18 +82,47 @@ ids, one of three supported paint brands with a sane paint-code shape).
 | GET | `/api/products` | product catalog with available sizes |
 | GET | `/api/products/{id}` | single product (404 if unknown) |
 | GET | `/api/stock-colors` | the six in-stock pre-painted colors |
-| POST | `/api/orders` | validate, price, and persist an order |
+| POST | `/api/checkout/session` | re-price the cart, create a pending order + Stripe Checkout Session (`ui_mode: elements`), return `clientSecret` |
+| POST | `/api/checkout/{orderId}/confirm` | re-verify the Checkout Session with Stripe and mark the order paid |
 
 ### API commands
 
 Run from `server/`:
 
 ```bash
-npm install              # install API dependencies
-npm run db:setup         # create schema + seed products/sizes/colors (idempotent)
-npm start                # API at http://localhost:3000
-npm run smoke            # exercise every route via server.inject (needs a seeded database; no port opened)
+npm install                      # install API dependencies
+cp .env.example .env             # then fill in STRIPE_SECRET_KEY
+npm run db:setup                 # create schema + seed products/sizes/colors (idempotent)
+npm start                        # API at http://localhost:3000
+npm run smoke                    # exercise every route via server.inject (needs a seeded database; no port opened)
+STRIPE_SECRET_KEY=sk_test_... npm run smoke   # also creates a live Checkout Session
 ```
+
+## Payments & coupons (Stripe)
+
+Checkout uses **Stripe.js v3 Checkout Elements** with the **Checkout Sessions API**
+(`ui_mode: "elements"`) — not a hosted Stripe Checkout redirect and not a bare PaymentIntent form. The page
+composes Stripe's Elements SDK pieces:
+
+- Express Checkout Element (Apple Pay / Google Pay / Link wallets when available)
+- Contact Details Element
+- Shipping Address Element
+- Billing Address Element
+- Payment Element
+
+Flow:
+
+1. Visiting `/checkout` with a non-empty cart calls `POST /api/checkout/session`, which re-prices the cart
+   server-side, creates a `pending` order, and creates a Checkout Session. The returned `clientSecret`
+   initializes `stripe.initCheckoutElementsSdk(...)`.
+2. Coupons are applied through Stripe itself via `actions.applyPromotionCode(code)` (Dashboard-managed
+   [Promotion Codes](https://dashboard.stripe.com/test/coupons)). Totals update from the session `change` event.
+3. "Pay" calls `actions.confirm(...)`. After success (or return from a redirect payment method), the app
+   hits `POST /api/checkout/{orderId}/confirm`, which re-fetches the Checkout Session with the secret key and
+   only then flips the order to `paid`, copying customer/shipping details Stripe collected.
+
+Test with Stripe's [test cards](https://docs.stripe.com/testing) (e.g. `4242 4242 4242 4242`, any future
+expiry/CVC) — no real charges occur while `STRIPE_SECRET_KEY` is a `sk_test_...` key.
 
 ## Database (PostgreSQL)
 
@@ -109,7 +148,7 @@ in `server/src/data.js`.
 | `products` | catalog (name, description, price, feature flags) |
 | `product_sizes` | standard sizes per product |
 | `stock_colors` | in-stock pre-painted finishes |
-| `orders` | placed orders — customer and line items as `jsonb`, server-computed total |
+| `orders` | placed orders — customer and line items as `jsonb`; subtotal, coupon code, discount, and server-computed total; `status` (`pending`/`paid`); Stripe Checkout Session id + PaymentIntent id |
 
 ## Image credits
 
@@ -126,6 +165,10 @@ Kitchen photography from [Pexels](https://www.pexels.com), used under the
 ## Running the full stack
 
 1. Start PostgreSQL and complete the database setup above (first run only)
-2. `npm run start:api` — API on **:3000**
-3. `npm start` — Angular on **:4200**
-4. Open the site: shop → product (size + finish) → cart → checkout; orders persist in the `orders` table
+2. In `server/`, copy `.env.example` to `.env` and set `STRIPE_SECRET_KEY` (test mode)
+3. Set `stripePublishableKey` in `src/environments/environment.development.ts`
+4. `npm run start:api` — API on **:3000**
+5. `npm start` — Angular on **:4200**
+6. Open the site: shop → product (size + finish) → cart → checkout → pay with a
+   [Stripe test card](https://docs.stripe.com/testing); orders persist in the `orders` table as `pending`,
+   then flip to `paid` once payment is confirmed

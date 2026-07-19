@@ -1,0 +1,40 @@
+:host {
+  display: block;
+}
+
+.coupon-applied {
+  border: 1px solid var(--bs-success-border-subtle, #a3cfbb);
+  background: var(--bs-success-bg-subtle, #d1e7dd);
+  border-radius: var(--bs-border-radius, 0.375rem);
+  padding: 0.6rem 0.9rem;
+}
+
+.checkout-elements-loading {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.checkout-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: #6c757d;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    border-top: 1px solid #e2e0d8;
+  }
+}
+
+.stripe-element-slot {
+  min-height: 1.5rem;
+}
+
+.payment-element-container {
+  min-height: 220px;
+}
