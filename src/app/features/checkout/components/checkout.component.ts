@@ -32,6 +32,7 @@ import {
   CheckoutService,
   CheckoutTotals
 } from '../../../core/services/checkout.service';
+import { AuthService } from '../../../core/services/auth.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -44,12 +45,21 @@ import Swal from 'sweetalert2';
 export class CheckoutComponent implements OnDestroy {
   private cartService = inject(CartService);
   private checkoutService = inject(CheckoutService);
+  private auth = inject(AuthService);
   private fb = inject(FormBuilder);
   private zone = inject(NgZone);
   private destroyRef = inject(DestroyRef);
 
   items = this.cartService.items;
   cartSubtotal = this.cartService.totalAmount;
+  isLoggedIn = this.auth.isLoggedIn;
+
+  // Optional account creation for guests — see accountPassword().
+  accountPasswordControl = this.fb.control('', {
+    nonNullable: true,
+    validators: [Validators.minLength(8), Validators.maxLength(100)]
+  });
+  showAccountPassword = signal(false);
 
   couponCodeControl = this.fb.control('', { nonNullable: true });
   // Contact Details Element only collects email. Name + phone are first-class
@@ -254,6 +264,11 @@ export class CheckoutComponent implements OnDestroy {
     }
     if (this.phoneControl.invalid) {
       this.paymentError.set('Please enter a valid phone number.');
+      return;
+    }
+    if (!this.isLoggedIn() && this.accountPasswordControl.value && this.accountPasswordControl.invalid) {
+      this.accountPasswordControl.markAsTouched();
+      this.paymentError.set('Account password must be at least 8 characters — or clear it to check out as a guest.');
       return;
     }
 
@@ -476,13 +491,28 @@ export class CheckoutComponent implements OnDestroy {
     }
   }
 
+  // Guest checkout account password. Empty (or invalid, or logged in) → undefined.
+  // Redirect payments return here with a fresh component, so no password —
+  // those customers set one from the verification email instead.
+  private accountPassword(): string | undefined {
+    const value = this.accountPasswordControl.value;
+    return !this.isLoggedIn() && this.accountPasswordControl.valid && value ? value : undefined;
+  }
+
   private finalizeOrder(orderId: string) {
-    this.checkoutService.confirmOrder(orderId).subscribe({
+    const password = this.accountPassword();
+    this.checkoutService.confirmOrder(orderId, password).subscribe({
       next: order => {
         this.processingPayment.set(false);
+        let text = `Order ${order.id} is confirmed for $${order.total.toFixed(2)}. We will contact you via email to confirm shipping details.`;
+        if (order.accountCreated) {
+          text += password
+            ? ' We also created your ProTectVinyl account — check your email to verify your address.'
+            : ' We also created your ProTectVinyl account — check your email to verify your address and set your password.';
+        }
         Swal.fire({
           title: 'Thank you for your order!',
-          text: `Order ${order.id} is confirmed for $${order.total.toFixed(2)}. We will contact you via email to confirm shipping details.`,
+          text,
           icon: 'success'
         });
         this.cartService.clearCart();
@@ -533,6 +563,8 @@ export class CheckoutComponent implements OnDestroy {
     this.couponCodeControl.setValue('');
     this.individualNameControl.reset('');
     this.phoneControl.reset('');
+    this.accountPasswordControl.reset('');
+    this.showAccountPassword.set(false);
     this.individualNameValid.set(false);
     this.phoneValid.set(false);
     this.couponStatus.set('idle');

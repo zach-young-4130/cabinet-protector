@@ -1,0 +1,168 @@
+<app-navbar></app-navbar>
+
+<main>
+  <div class="container py-5">
+    <app-admin-nav></app-admin-nav>
+
+    <div class="row g-4">
+      <div class="col-lg-5">
+        <h2 class="h4 fw-bold mb-1">In-stock colors</h2>
+        <p class="text-muted mb-3">Pre-painted colors customers can order for immediate shipping.</p>
+
+        @if (colorsError()) {
+          <p class="alert alert-danger py-2" role="alert">{{ colorsError() }}</p>
+        } @else if (colors() === null) {
+          <p class="text-muted" role="status">Loading colors…</p>
+        } @else {
+          <div class="card shadow-sm p-4">
+            <ul class="list-group list-group-flush mb-3">
+              @for (color of colors(); track color.id) {
+                <li class="list-group-item px-0">
+                  @if (editingId() === color.id) {
+                    <form [formGroup]="editForm" (ngSubmit)="saveEdit()" class="d-flex align-items-end gap-2 flex-wrap">
+                      <div class="flex-grow-1">
+                        <label [for]="'editName-' + color.id" class="form-label small mb-1">Name</label>
+                        <input type="text" [id]="'editName-' + color.id" class="form-control form-control-sm"
+                               formControlName="name">
+                      </div>
+                      <div>
+                        <label [for]="'editHex-' + color.id" class="form-label small mb-1">Color</label>
+                        <input type="color" [id]="'editHex-' + color.id"
+                               class="form-control form-control-color form-control-sm"
+                               formControlName="hex">
+                      </div>
+                      <div>
+                        <label [for]="'editBrand-' + color.id" class="form-label small mb-1">Brand</label>
+                        <select [id]="'editBrand-' + color.id" class="form-select form-select-sm"
+                                formControlName="brand">
+                          @for (brand of paintBrands; track brand.id) {
+                            <option [value]="brand.id">{{ brand.name }}</option>
+                          }
+                        </select>
+                      </div>
+                      <div class="d-flex gap-1">
+                        <button type="submit" class="btn btn-primary btn-sm" [disabled]="busy()">Save</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                (click)="cancelEdit()" [disabled]="busy()">Cancel</button>
+                      </div>
+                      @if (editForm.touched && editForm.invalid) {
+                        <p class="text-danger small w-100 mt-1 mb-0">Enter a name (2–60 characters).</p>
+                      }
+                    </form>
+                  } @else {
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="finish-chip" [style.background]="color.hex" aria-hidden="true"></span>
+                      <span class="fw-bold flex-grow-1">
+                        {{ color.name }}
+                        <span class="text-muted fw-normal small">({{ brandName(color.brand) }})</span>
+                      </span>
+                      <code class="small text-muted">{{ color.hex }}</code>
+                      <button type="button" class="btn btn-outline-secondary btn-sm"
+                              (click)="startEdit(color)" [disabled]="busy()"
+                              [attr.aria-label]="'Edit color ' + color.name">Edit</button>
+                      <button type="button" class="btn btn-outline-danger btn-sm"
+                              (click)="removeColor(color)" [disabled]="busy()"
+                              [attr.aria-label]="'Remove color ' + color.name">Remove</button>
+                    </div>
+                  }
+                </li>
+              } @empty {
+                <li class="list-group-item px-0 text-muted">No stock colors yet — add the first one below.</li>
+              }
+            </ul>
+
+            <form [formGroup]="addForm" (ngSubmit)="addColor()" class="border-top pt-3">
+              <h3 class="h6 mb-2">Add a color</h3>
+              <div class="d-flex align-items-end gap-2 flex-wrap">
+                <div class="flex-grow-1">
+                  <label for="newColorName" class="form-label small mb-1">Name</label>
+                  <input type="text" id="newColorName" class="form-control form-control-sm"
+                         formControlName="name" placeholder="e.g. Sagebrush Green">
+                </div>
+                <div>
+                  <label for="newColorHex" class="form-label small mb-1">Color</label>
+                  <input type="color" id="newColorHex"
+                         class="form-control form-control-color form-control-sm"
+                         formControlName="hex">
+                </div>
+                <div>
+                  <label for="newColorBrand" class="form-label small mb-1">Brand</label>
+                  <select id="newColorBrand" class="form-select form-select-sm" formControlName="brand">
+                    @for (brand of paintBrands; track brand.id) {
+                      <option [value]="brand.id">{{ brand.name }}</option>
+                    }
+                  </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm" [disabled]="busy()">Add</button>
+              </div>
+              @if (addForm.controls.name.touched && addForm.controls.name.invalid) {
+                <p class="text-danger small mt-1 mb-0">Enter a color name (2–60 characters).</p>
+              }
+            </form>
+          </div>
+        }
+      </div>
+
+      <div class="col-lg-7">
+        <h2 class="h4 fw-bold mb-1">Fulfillment queue</h2>
+        <p class="text-muted mb-3">Paid orders waiting to be manufactured and shipped.</p>
+
+        @if (queueError()) {
+          <p class="alert alert-danger py-2" role="alert">{{ queueError() }}</p>
+        } @else if (queue() === null) {
+          <p class="text-muted" role="status">Loading queue…</p>
+        } @else if (queue()!.length === 0) {
+          <div class="card shadow-sm p-4 text-center">
+            <p class="text-muted mb-0">Nothing waiting — every paid order has shipped.</p>
+          </div>
+        } @else {
+          @for (order of queue(); track order.id) {
+            <div class="card shadow-sm p-4 mb-3">
+              <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                <div>
+                  <h3 class="h6 fw-bold mb-1">
+                    <a [routerLink]="['/admin/orders', order.id]" class="font-monospace text-uppercase">
+                      {{ order.id.slice(0, 8) }}
+                    </a>
+                  </h3>
+                  <p class="text-muted small mb-0">
+                    Placed {{ order.createdAt | date:'mediumDate' }} — {{ order.customer.fullName || order.customer.email || '—' }}
+                  </p>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm"
+                        (click)="markShipped(order)" [disabled]="busy()"
+                        [attr.aria-label]="'Mark order ' + order.id.slice(0, 8) + ' as shipped'">
+                  Mark shipped
+                </button>
+              </div>
+
+              <ul class="list-group list-group-flush">
+                @for (line of order.lines; track $index) {
+                  <li class="list-group-item px-0 d-flex justify-content-between align-items-start gap-3">
+                    <div>
+                      <span class="fw-bold d-block">{{ line.productName }}</span>
+                      <span class="small d-block">
+                        Cut: {{ line.size.widthInches }}" &times; {{ line.size.heightInches }}"
+                        @if (line.size.kind === 'custom') {
+                          <span class="badge text-bg-info ms-1">Custom</span>
+                        }
+                      </span>
+                      <span class="small d-block">Finish: {{ line.finish.label }}</span>
+                    </div>
+                    <span class="badge text-bg-secondary text-nowrap">&times; {{ line.quantity }}</span>
+                  </li>
+                }
+              </ul>
+
+              @if (order.customer.address) {
+                <p class="text-muted small mb-0 mt-2" style="white-space: pre-line">{{ order.customer.address }}</p>
+              }
+            </div>
+          }
+        }
+      </div>
+    </div>
+  </div>
+</main>
+
+<app-footer></app-footer>

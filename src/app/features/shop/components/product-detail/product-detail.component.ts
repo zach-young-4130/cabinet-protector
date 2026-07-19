@@ -1,5 +1,5 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ProductService } from '../../../../core/services/product.service';
 import { VinylProtector } from '../../../../core/models/product.model';
 import { CommonModule } from '@angular/common';
@@ -32,6 +32,7 @@ const HEIGHT_RANGE = { min: 2, max: 24 };
 })
 export class ProductDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private productService = inject(ProductService);
   private cartService = inject(CartService);
   private fb = inject(FormBuilder);
@@ -94,6 +95,10 @@ export class ProductDetailComponent implements OnInit {
     return findPaintBrand(this.sizeForm.controls.paintBrand.value);
   }
 
+  brandName(brandId: string): string {
+    return findPaintBrand(brandId).name;
+  }
+
   addToCart() {
     const product = this.product();
     if (!product) {
@@ -111,7 +116,13 @@ export class ProductDetailComponent implements OnInit {
       title: 'Added to cart',
       text: `${product.name} (${size.label}, ${finish.label}) has been added to your cart.`,
       icon: 'success',
-      confirmButtonText: 'Continue shopping'
+      showCancelButton: true,
+      confirmButtonText: 'Go to cart',
+      cancelButtonText: 'Continue shopping'
+    }).then(result => {
+      if (result.isConfirmed) {
+        void this.router.navigate(['/cart']);
+      }
     });
   }
 

@@ -1,0 +1,72 @@
+<app-navbar></app-navbar>
+
+<main>
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-8 col-lg-6 col-xl-5">
+        <div class="card shadow-sm p-4">
+          @switch (status()) {
+            @case ('verifying') {
+              <p class="text-muted mb-0" role="status">Verifying your email…</p>
+            }
+            @case ('success') {
+              <h1 class="h3 fw-bold mb-2">Email verified</h1>
+              <p class="text-muted">
+                Thanks — your email address is confirmed and you're logged in.
+              </p>
+
+              @if (needsPassword() && !passwordSaved()) {
+                <div class="border-top pt-3 mt-2">
+                  <h2 class="h5 mb-1">Finish setting up your account</h2>
+                  <p class="text-muted small mb-3">
+                    Choose a password so you can log in on any device.
+                  </p>
+                  @if (passwordError()) {
+                    <p class="alert alert-danger py-2" role="alert">{{ passwordError() }}</p>
+                  }
+                  <form (ngSubmit)="savePassword()">
+                    <label for="verifyPassword" class="form-label">Password</label>
+                    <input type="password" id="verifyPassword" class="form-control"
+                           [formControl]="passwordControl" autocomplete="new-password"
+                           aria-describedby="verifyPasswordHelp">
+                    <p id="verifyPasswordHelp" class="form-text mb-0">At least 8 characters.</p>
+                    @if (passwordControl.touched && passwordControl.invalid) {
+                      <p class="text-danger small mt-1 mb-0">Enter a password of at least 8 characters.</p>
+                    }
+                    <button type="submit" class="btn btn-primary mt-3" [disabled]="savingPassword()">
+                      {{ savingPassword() ? 'Saving…' : 'Save password' }}
+                    </button>
+                  </form>
+                </div>
+              }
+              @if (passwordSaved()) {
+                <p class="alert alert-success py-2" role="status">
+                  Password saved — you can now log in with it on any device.
+                </p>
+              }
+
+              <div class="d-flex gap-2 mt-3">
+                <a class="btn btn-primary" routerLink="/account/orders">View my orders</a>
+                <a class="btn btn-outline-primary" routerLink="/shop">Continue shopping</a>
+              </div>
+            }
+            @case ('error') {
+              <h1 class="h3 fw-bold mb-2">Verification failed</h1>
+              <p class="alert alert-danger py-2" role="alert">{{ error() }}</p>
+              <p class="text-muted small mb-3">
+                Verification links are single-use — if you've already verified this email,
+                you can simply log in.
+              </p>
+              <div class="d-flex gap-2">
+                <a class="btn btn-primary" routerLink="/login">Log in</a>
+                <a class="btn btn-outline-primary" routerLink="/signup">Create an account</a>
+              </div>
+            }
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<app-footer></app-footer>
