@@ -38,6 +38,7 @@ export interface ConfirmedOrder {
   total: number;
   couponCode?: string | null;
   discountAmount?: number;
+  accountCreated?: boolean;
 }
 
 export interface CheckoutTotals {
@@ -68,8 +69,12 @@ export class CheckoutService {
     return this.http.post<CheckoutSessionResponse>(`${environment.apiUrl}/checkout/session`, { items });
   }
 
-  confirmOrder(orderId: string) {
-    return this.http.post<ConfirmedOrder>(`${environment.apiUrl}/checkout/${orderId}/confirm`, {});
+  // Optional password: sets up an account for the Stripe-collected email.
+  confirmOrder(orderId: string, password?: string) {
+    return this.http.post<ConfirmedOrder>(
+      `${environment.apiUrl}/checkout/${orderId}/confirm`,
+      password ? { password } : {}
+    );
   }
 
   async initCheckoutElements(clientSecret: string): Promise<{

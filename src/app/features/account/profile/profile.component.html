@@ -1,0 +1,51 @@
+<app-navbar></app-navbar>
+
+<main>
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-8 col-lg-6">
+        @if (user(); as u) {
+          <div class="card shadow-sm p-4">
+            <div class="d-flex justify-content-between align-items-start mb-4">
+              <div>
+                <h1 class="h3 fw-bold mb-1">My profile</h1>
+                <p class="text-muted mb-0">Your ProTectVinyl account details.</p>
+              </div>
+              <a class="btn btn-outline-primary btn-sm" routerLink="/account/orders">My orders</a>
+            </div>
+
+            <dl class="row mb-0">
+              <dt class="col-sm-4">Full name</dt>
+              <dd class="col-sm-8">{{ u.fullName }}</dd>
+
+              <dt class="col-sm-4">Email</dt>
+              <dd class="col-sm-8">
+                {{ u.email }}
+                @if (u.emailVerified) {
+                  <span class="badge text-bg-success ms-1">Verified</span>
+                } @else {
+                  <span class="badge text-bg-warning ms-1">Not verified</span>
+                }
+              </dd>
+
+              <dt class="col-sm-4">Phone</dt>
+              <dd class="col-sm-8">{{ u.phone || '—' }}</dd>
+
+              <dt class="col-sm-4">Member since</dt>
+              <dd class="col-sm-8 mb-0">{{ u.createdAt | date:'mediumDate' }}</dd>
+            </dl>
+
+            @if (!u.emailVerified) {
+              <p class="alert alert-warning small mt-4 mb-0" role="status">
+                Your email isn't verified yet — check your inbox for the welcome email and click the
+                verification link to see your full order history.
+              </p>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</main>
+
+<app-footer></app-footer>

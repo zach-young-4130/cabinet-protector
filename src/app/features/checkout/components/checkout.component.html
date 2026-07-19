@@ -56,6 +56,40 @@
               }
             </section>
 
+            @if (!isLoggedIn()) {
+              <section class="checkout-section mb-4" aria-labelledby="account-heading">
+                <h2 id="account-heading" class="h6 text-uppercase text-muted mb-3">
+                  Account <span class="text-lowercase fw-normal">(optional)</span>
+                </h2>
+                <p class="small text-muted mb-2">
+                  Set a password and we'll create your ProTectVinyl account with this order,
+                  so you can track it anytime.
+                </p>
+                <label for="accountPassword" class="form-label">Password</label>
+                <div class="input-group">
+                  <input
+                    [type]="showAccountPassword() ? 'text' : 'password'"
+                    id="accountPassword"
+                    class="form-control"
+                    [formControl]="accountPasswordControl"
+                    autocomplete="new-password"
+                    aria-describedby="accountPasswordHelp">
+                  <button type="button" class="btn btn-outline-secondary"
+                          (click)="showAccountPassword.set(!showAccountPassword())"
+                          [attr.aria-label]="showAccountPassword() ? 'Hide password' : 'Show password'"
+                          [attr.aria-pressed]="showAccountPassword()">
+                    {{ showAccountPassword() ? 'Hide' : 'Show' }}
+                  </button>
+                </div>
+                <p id="accountPasswordHelp" class="form-text mb-0">
+                  At least 8 characters. Leave blank to check out as a guest.
+                </p>
+                @if (accountPasswordControl.touched && accountPasswordControl.invalid) {
+                  <p class="text-danger small mt-1 mb-0">Passwords must be at least 8 characters.</p>
+                }
+              </section>
+            }
+
             <section class="checkout-section mb-4" aria-labelledby="shipping-heading">
               <h2 id="shipping-heading" class="h6 text-uppercase text-muted mb-3">Shipping address</h2>
               <div #shippingAddressContainer class="stripe-element-slot"></div>

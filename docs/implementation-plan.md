@@ -122,3 +122,127 @@ to all three brands' official color-finding tools.
 - [x] FAQ page
 - [x] Routes + navbar
 - [x] Build & tests green
+
+## Phase 4: Customer Accounts, Auth & Order History (2026-07-19)
+
+### Goals
+- [x] `AuthService` holding auth state in localStorage (token + user snapshot), signal-based like `CartService`.
+- [x] Login page at `/login` and signup page at `/signup`.
+- [x] Optional "create a password" field at checkout; every paid order creates (or links to) a customer record.
+- [x] Welcome email on account creation with a verification link; clicking it lands on `/verify-email?token=…` which sets `email_verified = true`.
+- [x] Navbar: logged-in users see "Hi, {first name}" with a right-aligned dropdown (Profile / My Orders / Log out); logged-out users see Log in / Sign up.
+- [x] Profile page at `/account` (name, email, phone, verified badge).
+- [x] Orders page at `/account/orders` — survives refresh (auth restored from localStorage, orders refetched from the API), lists all orders for the signed-in customer.
+- [x] Single order page at `/account/orders/:id` (lines with size/finish, totals, shipping address, status).
+
+### Decisions & Assumptions (confirm before implementing)
+1. **Guest checkout stays.** The checkout password field is optional — "able to set a password", not required. Logged-in customers don't see it; their order links automatically.
+2. **Auth tokens: opaque DB-backed session tokens, not JWT.** A `sessions` table (random 32-byte token, stored hashed, 30-day expiry) needs zero new dependencies, is revocable on logout, and a tiny custom Hapi bearer scheme covers it. Sent as `Authorization: Bearer` from an Angular interceptor.
+3. **Password hashing: `node:crypto` scrypt** (+ `timingSafeEqual`) — no bcrypt dependency.
+4. **Email: Resend** (free tier: 3,000 emails/month) via its plain HTTPS API (`POST https://api.resend.com/emails` with global `fetch`) — no SDK, zero new dependencies. Guarded like `stripe.js`: when `RESEND_API_KEY` is absent (dev), log the message + verification URL to the console instead of failing. Note: Resend's free tier sends from `onboarding@resend.dev` only to your own address until a domain is verified in their dashboard.
+5. **Stripe redirect payments lose the checkout password** (the page navigates away; we won't stash a plaintext password in storage). Those orders still create the customer from the Stripe email; the verification link doubles as "finish setting up your account" and lets a customer with no password set one. Card payments (no redirect) pass the password on the confirm call.
+6. **Guest-order backfill is verification-gated.** Orders made while logged in / with a checkout password link to `customer_id` immediately (same session proves ownership). Older guest orders matching the customer's email are linked only once the email is verified — otherwise signing up with someone else's address would expose their order history.
+7. Routes are eagerly imported and components are standalone, matching `app.routes.ts` as it stands today.
+
+### Technical Strategy
+
+1. **Database** (`db-setup.js`, idempotent like existing DDL):
+   - `customers`: `id uuid PK`, `email text UNIQUE` (stored lowercased), `full_name`, `phone`, `password_hash text NULL`, `email_verified boolean DEFAULT false`, `created_at`.
+   - `sessions`: `token_hash text PK`, `customer_id FK`, `expires_at`.
+   - `email_verifications`: `token_hash text PK`, `customer_id FK`, `expires_at` (7 days, single-use).
+   - `orders`: `ADD COLUMN IF NOT EXISTS customer_id uuid REFERENCES customers(id)`.
+2. **Server auth plumbing** (`server/src/auth.js`): scrypt hash/verify, token mint/hash, a `customer` Hapi auth strategy resolving `Authorization: Bearer` → customer row.
+3. **Auth endpoints**:
+   - `POST /api/auth/signup` — create customer (409 on duplicate email), send welcome/verification email, return `{ token, user }`.
+   - `POST /api/auth/login` — verify password, return `{ token, user }`. Same error for unknown email vs wrong password.
+   - `POST /api/auth/logout` — delete session row.
+   - `GET /api/auth/me` — validate the stored token on app boot; 401 clears client state.
+   - `POST /api/auth/verify-email` — consume token: set `email_verified`, backfill guest orders by email, return `{ token, user }` so the click also signs the customer in.
+   - `POST /api/auth/password` — set-only (409 if a password exists): lets accounts created at checkout without a password finish setup from the verify-email page. (Implemented instead of verify-email accepting a password — the verification token is single-use, so password entry has to happen after it's consumed.)
+4. **Customer creation at checkout**: `POST /api/checkout/{orderId}/confirm` gains optional `password` in the payload and honors an optional auth header. After the session is verified paid, every order gets an owner: the logged-in caller, an existing account matching the Stripe email (a supplied password never touches an existing account), or a newly created customer — with the checkout password when one was entered, passwordless otherwise — who gets the welcome email. Response includes `accountCreated` so the UI can mention "check your email".
+5. **Order endpoints** (auth required): `GET /api/orders` (customer's orders, newest first) and `GET /api/orders/{id}` (404 unless owned by the caller — never 403, don't leak existence).
+6. **Email module** (`server/src/email.js`): thin Resend `fetch` wrapper per decision 4; welcome template with `${APP_URL}/verify-email?token=…`.
+7. **Frontend `AuthService`** (`core/services/auth.service.ts`): `_state` signal `{ token, user } | null` loaded from localStorage key `protect-vinyl.auth.v1` with a shape guard, persisted via `effect` — the `CartService` pattern. Exposes `user`, `isLoggedIn`, `firstName` computed; `login`/`signup`/`logout`/`verifyEmail`/`refreshUser` call the API. On construction, if a token exists, `GET /api/auth/me` re-validates it (stale → clear).
+8. **HTTP interceptor + guard**: functional `authInterceptor` (adds bearer header; on 401 clears auth state) registered via `withInterceptors` in `app-module.ts`; functional `authGuard` protecting `/account/**`, redirecting to `/login` with a `returnUrl` query param.
+9. **Pages** (standalone, under `features/auth/` and `features/account/`): login and signup (typed reactive forms, inline API errors, cross-links), verify-email (reads `token` query param, success/expired states), profile, orders list, order detail. The orders table gets a `<caption>`, `<th scope>`, and per-row links labeled with the order id; status badges include text, not color alone.
+10. **Navbar**: right side renders from `AuthService.isLoggedIn()` — Bootstrap dropdown (`data-bs-toggle="dropdown"`, CDN bundle already loaded) with `aria-expanded`, labeled toggle "Account menu for {name}"; Log in / Sign up links otherwise.
+11. **Checkout UI**: when logged out, an optional "Create an account" password input (with visibility toggle + label) near the contact fields; value is passed to `confirmOrder(orderId, password?)`. Confirmation dialog mentions the verification email when `accountCreated` is true.
+12. **Verification**: extend `server/src/smoke.js` to cover signup → login → me → orders-list → order-detail ownership (wrong customer → 404) and the confirm-creates-customer path; `ng build` + existing tests stay green.
+
+### New dependencies & env
+- No new packages, frontend or server (Resend is called with built-in `fetch`; scrypt replaces bcrypt).
+- New `server/.env` keys: `APP_URL` (verification links, e.g. `http://localhost:4200`), `RESEND_API_KEY`, `EMAIL_FROM` (optional in dev — console fallback).
+
+### Progress Tracking
+- [x] DB: customers / sessions / email_verifications / orders.customer_id
+- [x] Server: auth module (scrypt + hashed opaque tokens, `customerFromRequest` helper instead of a formal hapi strategy — no @hapi/boom dependency needed)
+- [x] Server: auth endpoints (signup, login, logout, me, verify-email, set-password)
+- [x] Server: confirm creates/links customer + welcome email
+- [x] Server: email module (console fallback)
+- [x] Server: orders endpoints + ownership checks
+- [x] Server: smoke coverage (signup/login/me/logout, 401s, empty orders, ownership 404, bogus verify token)
+- [x] FE: AuthService + interceptor + guard
+- [x] FE: login / signup pages
+- [x] FE: verify-email page (with set-password step for checkout-created accounts)
+- [x] FE: navbar dropdown
+- [x] FE: checkout password field (with show/hide toggle)
+- [x] FE: profile page
+- [x] FE: orders list + order detail pages
+- [x] Build & tests green; accessibility self-check on new UI
+
+To run: `npm run db:setup` in `server/` (new tables), then `npm run smoke`. Optional `.env` keys: `APP_URL`, `RESEND_API_KEY`, `EMAIL_FROM` — without them, verification links are logged to the API console. Note: the initial bundle now exceeds the 500 kB budget by ~26 kB (warning only).
+
+## Phase 5: Admin — Orders, Users & Inventory (2026-07-19)
+
+### Goals
+- [x] Admin users: `is_admin` flag on customers, granted **manually only** (SQL — no endpoint or UI can set it).
+- [x] Admin area at `/admin` with three sections: Orders, Users, Inventory. The `is_admin` flag is never written to localStorage and the `/admin` guard verifies admin status against the server on every entry; every `/api/admin/*` route additionally re-checks `is_admin` in the database (the server is authoritative).
+- [x] Admin orders list: all orders, filterable by status, with customer email/date/total.
+- [x] Admin single order: full refund, partial refund (dollar amount), cancel, edit shipping address, mark shipped / delivered.
+- [x] Admin users list: ban/unban (banned users cannot enter the platform), delete, change email, send a password-reset link.
+- [x] Password-reset flow (new public capability the reset link needs): reset email + `/reset-password?token=…` page.
+- [x] Inventory: manage in-stock colors for pre-painted items (add / edit / remove), plus a fulfillment dashboard — the manufacturing work queue of paid orders showing exactly what to produce per line (dimensions, finish or paint code, quantity) with one-click mark-shipped.
+
+### Decisions & Assumptions (confirm before implementing)
+1. **Admin bootstrap is SQL-only**: `UPDATE customers SET is_admin = true WHERE email = '…';` after the person signs up normally. Nothing in the API can grant or revoke admin.
+   **The admin flag never touches localStorage.** The persisted auth snapshot strips `isAdmin`; it lives only in an in-memory signal populated from server responses (`/auth/me`, login). The `adminGuard` is async and resolves a fresh `GET /api/auth/me` before activating `/admin` routes, so editing the localStorage object (or any client state) changes nothing — the admin UI renders only on a server-confirmed answer, and every admin API call re-verifies `is_admin` in the database against the session token. A tampered client gets neither the shell nor the data.
+2. **Cancel does not move money; refund is explicit — and refund state is orthogonal to fulfillment.** Refunds go through Stripe (`refunds.create` on the order's payment intent) and accumulate in `orders.refund_amount` (capped at the total); they never change `status`, so an order can be shipped or delivered *and* partially or fully refunded at the same time. The UI derives a refund badge ("Refunded" / "Refunded $X of $Y") shown alongside the status badge. Cancel sets status `canceled` and is allowed only before shipment.
+3. **Ban takes effect immediately**: login is rejected ("This account has been disabled.") and all of the user's sessions are deleted, so existing tokens die too. `is_banned` is also checked when resolving any session.
+4. **Deleting a user keeps their orders** for financial records — `orders.customer_id` becomes NULL (FK changes to `ON DELETE SET NULL`); sessions/verifications/resets cascade away. Hard delete, no soft-delete column.
+5. **Changing a user's email** lowercases it, 409s on conflict, marks the account unverified, and sends a fresh verification email to the new address.
+6. **Password reset overwrites the existing password** (the token proves mailbox ownership) and revokes all sessions. Tokens are single-use, 1-hour expiry.
+7. **Stock colors are hard-deleted** — order lines snapshot the finish label, so history is safe; removing a color just stops new orders from selecting it.
+8. **Status vocabulary** is the fulfillment lifecycle only: `pending → paid → shipped → delivered`, plus `canceled`. There is no `refunded` status — refund state is derived from `refund_amount` (none / partial / full) and coexists with any status. Ship/deliver transitions are only allowed from `paid`/`shipped`.
+
+### Technical Strategy
+1. **DB** (`db-setup.js`, idempotent): `customers.is_admin` + `customers.is_banned` (boolean, default false); `orders.refund_amount numeric(10,2) DEFAULT 0`; `password_resets` table (token_hash PK, customer_id FK cascade, expires_at); recreate `orders_customer_id_fkey` with `ON DELETE SET NULL`.
+2. **Server auth**: session resolution excludes banned users; login 403s for banned; `adminFromRequest` helper (customer + `is_admin`) guards every admin route.
+3. **Stripe** (`stripe.js`): `createRefund(paymentIntentId, amountCents?)` — omit amount for full refund of the remainder; server validates amount ≤ total − already refunded.
+4. **Admin endpoints** under `/api/admin/`: orders list (optional `?status=`) + detail; `POST orders/{id}/refund {amount?}`; `POST orders/{id}/cancel`; `PATCH orders/{id}/shipping-address {address}`; `PATCH orders/{id}/status {status: shipped|delivered}`; users list; `PATCH users/{id}/ban {banned}`; `DELETE users/{id}`; `PATCH users/{id}/email {email}`; `POST users/{id}/password-reset`; stock-colors `POST` / `PATCH {id}` / `DELETE {id}`.
+5. **Public reset endpoint**: `POST /api/auth/reset-password {token, password}` — consumes the reset token, overwrites the hash, revokes sessions, returns `{ token, user }` (logs the user in).
+6. **Email** (`email.js`): `sendPasswordResetEmail` reusing the Resend wrapper + console fallback.
+7. **FE core**: `AuthService` keeps `isAdmin` in a memory-only signal set from server responses and stripped before every localStorage write (the stored shape guard also drops any injected `isAdmin` key on load); async `adminGuard` awaits `GET /api/auth/me` and admits only a server-confirmed admin; `AdminService` (`core/services/admin.service.ts`) wrapping the admin API; `AuthService.resetPassword`. The `statusClass` helper now needed by 4+ components gets extracted to a shared util (rule of three).
+8. **FE pages** under `features/admin/` (nested-folder style matching `features/account/`): `orders/order-list`, `orders/order-detail` (actions panel: refund with amount input, cancel, shipping-address form, ship/deliver buttons — all confirmed via Swal), `users/user-list` (ban toggle, delete confirm, change-email, send-reset — per-row buttons labeled with the user's email), `inventory/inventory` (stock-color manager + fulfillment queue: paid orders expanded to per-line manufacturing specs with mark-shipped). `features/auth/reset-password` public page.
+9. **Navbar**: "Admin" entry in the account dropdown when `isAdmin`.
+10. **Smoke**: `/api/admin/*` 401 anon / 403 non-admin; banned login 403; bogus reset token 400; stock-color create→delete round-trip; refund/cancel validation (non-Stripe paths).
+
+### New dependencies & env
+- None. (Stripe refunds use the existing SDK; reset emails use the existing Resend wrapper.)
+
+### Progress Tracking
+- [x] DB: is_admin / is_banned / refund_amount / password_resets / FK change
+- [x] Server: banned enforcement (login 403 + session resolution excludes banned) + `requireAdmin` hapi pre
+- [x] Server: admin order endpoints (refund via Stripe with SQL-capped accumulation, cancel, address, status transitions guarded in SQL)
+- [x] Server: admin user endpoints (ban kills sessions, delete unlinks orders, email re-verifies, reset link) + public reset endpoint
+- [x] Server: stock-color management endpoints (id slugged from name, hex validated)
+- [x] Server: smoke coverage (mid-run SQL promotion, ban round-trip, email change + conflict, delete, color CRUD, self-ban 400)
+- [x] FE: adminGuard (server-verified) + AdminService + shared `order-status.ts` util (statusClass / itemCount / refundLabel — rule-of-three extraction)
+- [x] FE: admin orders list + order detail actions
+- [x] FE: admin users page
+- [x] FE: inventory (colors + fulfillment queue)
+- [x] FE: reset-password page + navbar Admin entry
+- [x] Build & tests green; accessibility self-check
+
+To run: `npm run db:setup` in `server/`, then `npm run smoke`. Grant admin with:
+`UPDATE customers SET is_admin = true WHERE email = 'you@example.com';`
+Self-ban and self-delete are rejected server-side. The initial bundle is now ~569 kB (69 kB over the 500 kB warning budget) — lazy-loading the admin/account routes would claw this back if it starts to matter.

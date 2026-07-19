@@ -1,0 +1,47 @@
+<app-navbar></app-navbar>
+
+<main>
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-7 col-lg-5 col-xl-4">
+        <div class="card shadow-sm p-4">
+          <h1 class="h3 fw-bold mb-1">Log in</h1>
+          <p class="text-muted mb-4">Welcome back — see your orders and manage your account.</p>
+
+          @if (error()) {
+            <p class="alert alert-danger py-2" role="alert">{{ error() }}</p>
+          }
+
+          <form [formGroup]="form" (ngSubmit)="submit()">
+            <label for="loginEmail" class="form-label">Email</label>
+            <input type="email" id="loginEmail" class="form-control" formControlName="email"
+                   autocomplete="email">
+            @if (form.controls.email.touched && form.controls.email.invalid) {
+              <p class="text-danger small mt-1 mb-0">Enter a valid email address.</p>
+            }
+
+            <label for="loginPassword" class="form-label mt-3">Password</label>
+            <input type="password" id="loginPassword" class="form-control" formControlName="password"
+                   autocomplete="current-password">
+            @if (form.controls.password.touched && form.controls.password.invalid) {
+              <p class="text-danger small mt-1 mb-0">Enter your password.</p>
+            }
+
+            <div class="d-grid mt-4">
+              <button type="submit" class="btn btn-primary" [disabled]="submitting()">
+                {{ submitting() ? 'Logging in…' : 'Log in' }}
+              </button>
+            </div>
+          </form>
+
+          <p class="text-muted small mt-4 mb-0">
+            New to ProTectVinyl? <a routerLink="/signup">Create an account</a> — or place an order
+            and set a password at checkout.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<app-footer></app-footer>

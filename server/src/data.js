@@ -14,13 +14,14 @@ export const PAINT_BRANDS = {
   'behr': { name: 'Behr' }
 };
 
+// Each stocked color is pre-painted with a specific brand's paint.
 export const stockColors = [
-  { id: 'alabaster-white', name: 'Alabaster White', hex: '#EDEAE0' },
-  { id: 'harbor-fog', name: 'Harbor Fog', hex: '#B9C0C4' },
-  { id: 'sagebrush', name: 'Sagebrush', hex: '#8A9A8B' },
-  { id: 'midnight-navy', name: 'Midnight Navy', hex: '#1F3A5F' },
-  { id: 'clay-ridge', name: 'Clay Ridge', hex: '#B07A5C' },
-  { id: 'iron-ore', name: 'Iron Ore', hex: '#4A4A48' }
+  { id: 'alabaster-white', name: 'Alabaster White', hex: '#EDEAE0', brand: 'sherwin-williams' },
+  { id: 'harbor-fog', name: 'Harbor Fog', hex: '#B9C0C4', brand: 'benjamin-moore' },
+  { id: 'sagebrush', name: 'Sagebrush', hex: '#8A9A8B', brand: 'behr' },
+  { id: 'midnight-navy', name: 'Midnight Navy', hex: '#1F3A5F', brand: 'benjamin-moore' },
+  { id: 'clay-ridge', name: 'Clay Ridge', hex: '#B07A5C', brand: 'behr' },
+  { id: 'iron-ore', name: 'Iron Ore', hex: '#4A4A48', brand: 'sherwin-williams' }
 ];
 
 export const products = [

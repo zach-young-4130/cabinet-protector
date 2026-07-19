@@ -1,0 +1,91 @@
+<app-navbar></app-navbar>
+
+<main>
+  <div class="container py-5">
+    <app-admin-nav></app-admin-nav>
+
+    <h2 class="h4 fw-bold mb-1">Users</h2>
+    <p class="text-muted mb-3">Every customer account on the platform.</p>
+
+    @if (error()) {
+      <p class="alert alert-danger py-2" role="alert">{{ error() }}</p>
+    } @else if (users() === null) {
+      <p class="text-muted" role="status">Loading users…</p>
+    } @else {
+      <div class="card shadow-sm">
+        <div class="table-responsive">
+          <table class="table align-middle mb-0">
+            <caption class="visually-hidden">Customer accounts</caption>
+            <thead>
+              <tr>
+                <th scope="col" class="ps-3">Name</th>
+                <th scope="col">Email</th>
+                <th scope="col">Joined</th>
+                <th scope="col">Flags</th>
+                <th scope="col"><span class="visually-hidden">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (user of users(); track user.id) {
+                <tr>
+                  <th scope="row" class="ps-3 fw-normal">{{ user.fullName || '—' }}</th>
+                  <td>
+                    {{ user.email }}
+                    @if (user.emailVerified) {
+                      <span class="badge text-bg-success ms-1">Verified</span>
+                    } @else {
+                      <span class="badge text-bg-warning ms-1">Unverified</span>
+                    }
+                  </td>
+                  <td>{{ user.createdAt | date:'mediumDate' }}</td>
+                  <td>
+                    @if (user.isAdmin) {
+                      <span class="badge text-bg-primary">Admin</span>
+                    }
+                    @if (user.isBanned) {
+                      <span class="badge text-bg-danger">Banned</span>
+                    }
+                    @if (!user.isAdmin && !user.isBanned) {
+                      <span class="text-muted small">—</span>
+                    }
+                  </td>
+                  <td class="text-end pe-3 text-nowrap">
+                    <div class="btn-group btn-group-sm" role="group"
+                         [attr.aria-label]="'Actions for ' + user.email">
+                      <button type="button" class="btn btn-outline-secondary"
+                              (click)="changeEmail(user)"
+                              [disabled]="busyId() === user.id"
+                              [attr.aria-label]="'Change email for ' + user.email">
+                        Email
+                      </button>
+                      <button type="button" class="btn btn-outline-secondary"
+                              (click)="sendReset(user)"
+                              [disabled]="busyId() === user.id"
+                              [attr.aria-label]="'Send password reset link to ' + user.email">
+                        Reset link
+                      </button>
+                      <button type="button" class="btn btn-outline-warning"
+                              (click)="toggleBan(user)"
+                              [disabled]="busyId() === user.id || isSelf(user)"
+                              [attr.aria-label]="(user.isBanned ? 'Unban ' : 'Ban ') + user.email">
+                        {{ user.isBanned ? 'Unban' : 'Ban' }}
+                      </button>
+                      <button type="button" class="btn btn-outline-danger"
+                              (click)="deleteUser(user)"
+                              [disabled]="busyId() === user.id || isSelf(user)"
+                              [attr.aria-label]="'Delete ' + user.email">
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  </div>
+</main>
+
+<app-footer></app-footer>

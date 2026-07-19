@@ -30,8 +30,11 @@ await pool.query(`
     id text PRIMARY KEY,
     name text NOT NULL,
     hex text NOT NULL,
+    brand text NOT NULL DEFAULT 'sherwin-williams',
     sort_order integer NOT NULL DEFAULT 0
   );
+
+  ALTER TABLE stock_colors ADD COLUMN IF NOT EXISTS brand text NOT NULL DEFAULT 'sherwin-williams';
 
   CREATE TABLE IF NOT EXISTS orders (
     id uuid PRIMARY KEY,
@@ -52,6 +55,48 @@ await pool.query(`
   ALTER TABLE orders ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'pending';
   ALTER TABLE orders ADD COLUMN IF NOT EXISTS stripe_payment_intent_id text;
   ALTER TABLE orders ADD COLUMN IF NOT EXISTS stripe_checkout_session_id text;
+
+  CREATE TABLE IF NOT EXISTS customers (
+    id uuid PRIMARY KEY,
+    email text NOT NULL UNIQUE,
+    full_name text NOT NULL DEFAULT '',
+    phone text NOT NULL DEFAULT '',
+    password_hash text,
+    email_verified boolean NOT NULL DEFAULT false,
+    created_at timestamptz NOT NULL DEFAULT now()
+  );
+
+  CREATE TABLE IF NOT EXISTS sessions (
+    token_hash text PRIMARY KEY,
+    customer_id uuid NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    expires_at timestamptz NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS email_verifications (
+    token_hash text PRIMARY KEY,
+    customer_id uuid NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    expires_at timestamptz NOT NULL
+  );
+
+  ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_id uuid REFERENCES customers(id);
+
+  ALTER TABLE customers ADD COLUMN IF NOT EXISTS is_admin boolean NOT NULL DEFAULT false;
+  ALTER TABLE customers ADD COLUMN IF NOT EXISTS is_banned boolean NOT NULL DEFAULT false;
+  ALTER TABLE orders ADD COLUMN IF NOT EXISTS refund_amount numeric(10,2) NOT NULL DEFAULT 0;
+
+  CREATE TABLE IF NOT EXISTS password_resets (
+    token_hash text PRIMARY KEY,
+    customer_id uuid NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    expires_at timestamptz NOT NULL
+  );
+
+  -- Deleting a customer keeps their orders for financial records, unlinked.
+  ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_customer_id_fkey;
+  ALTER TABLE orders ADD CONSTRAINT orders_customer_id_fkey
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL;
 `);
 
 for (const product of products) {
@@ -87,13 +132,14 @@ for (const product of products) {
 
 for (const [index, color] of stockColors.entries()) {
   await pool.query(
-    `INSERT INTO stock_colors (id, name, hex, sort_order)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO stock_colors (id, name, hex, brand, sort_order)
+     VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (id) DO UPDATE SET
        name = EXCLUDED.name,
        hex = EXCLUDED.hex,
+       brand = EXCLUDED.brand,
        sort_order = EXCLUDED.sort_order`,
-    [color.id, color.name, color.hex, index]
+    [color.id, color.name, color.hex, color.brand, index]
   );
 }
 

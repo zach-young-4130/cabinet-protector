@@ -1,0 +1,69 @@
+<app-navbar></app-navbar>
+
+<main>
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-lg-10 col-xl-8">
+        <h1 class="h3 fw-bold mb-1">My orders</h1>
+        <p class="text-muted mb-4">Every order placed with your account.</p>
+
+        @if (error()) {
+          <p class="alert alert-danger py-2" role="alert">{{ error() }}</p>
+        } @else if (orders() === null) {
+          <p class="text-muted" role="status">Loading your orders…</p>
+        } @else if (orders()!.length === 0) {
+          <div class="card shadow-sm p-4 text-center">
+            <p class="text-muted mb-3">You haven't placed any orders yet.</p>
+            <div>
+              <a class="btn btn-primary" routerLink="/shop">Browse protectors</a>
+            </div>
+          </div>
+        } @else {
+          <div class="card shadow-sm">
+            <div class="table-responsive">
+              <table class="table align-middle mb-0">
+                <caption class="visually-hidden">Orders placed with your account</caption>
+                <thead>
+                  <tr>
+                    <th scope="col" class="ps-3">Placed</th>
+                    <th scope="col">Order</th>
+                    <th scope="col">Items</th>
+                    <th scope="col">Total</th>
+                    <th scope="col">Status</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (order of orders(); track order.id) {
+                    <tr>
+                      <td class="ps-3">{{ order.createdAt | date:'mediumDate' }}</td>
+                      <th scope="row" class="font-monospace small fw-normal text-uppercase">
+                        {{ order.id.slice(0, 8) }}
+                      </th>
+                      <td>{{ itemCount(order) }}</td>
+                      <td>${{ order.total | number:'1.2-2' }}</td>
+                      <td>
+                        <span class="badge text-capitalize" [class]="statusClass(order.status)">
+                          {{ order.status }}
+                        </span>
+                      </td>
+                      <td class="text-end pe-3">
+                        <a class="btn btn-sm btn-outline-primary"
+                           [routerLink]="['/account/orders', order.id]"
+                           [attr.aria-label]="'View order ' + order.id.slice(0, 8) + ' placed ' + (order.createdAt | date:'mediumDate')">
+                          View
+                        </a>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</main>
+
+<app-footer></app-footer>

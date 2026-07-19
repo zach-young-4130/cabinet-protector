@@ -49,6 +49,15 @@ export async function retrieveCheckoutSession(sessionId) {
   });
 }
 
+// Omit amountCents to refund whatever remains on the payment intent.
+export async function createRefund(paymentIntentId, amountCents) {
+  const stripe = getStripeClient();
+  return stripe.refunds.create({
+    payment_intent: paymentIntentId,
+    ...(amountCents ? { amount: amountCents } : {})
+  });
+}
+
 // Formats a Stripe Address into a single shipping string for our order record.
 export function formatStripeAddress(address) {
   if (!address) {

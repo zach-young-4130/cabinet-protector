@@ -9,6 +9,8 @@ export interface FinishColor {
   id: string;
   name: string;
   hex: string;
+  /** Paint brand id (e.g. 'sherwin-williams') this stock color is pre-painted with. */
+  brand: string;
 }
 
 export interface VinylProtector {
