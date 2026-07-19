@@ -7,10 +7,14 @@ await pool.query(`
     name text NOT NULL,
     description text NOT NULL,
     price numeric(10,2) NOT NULL,
+    thickness_mils integer NOT NULL DEFAULT 20,
     is_paintable boolean NOT NULL DEFAULT true,
     is_removable boolean NOT NULL DEFAULT true,
     is_cuttable boolean NOT NULL DEFAULT true
   );
+
+  ALTER TABLE products
+    ADD COLUMN IF NOT EXISTS thickness_mils integer NOT NULL DEFAULT 20;
 
   CREATE TABLE IF NOT EXISTS product_sizes (
     id text PRIMARY KEY,
@@ -39,16 +43,17 @@ await pool.query(`
 
 for (const product of products) {
   await pool.query(
-    `INSERT INTO products (id, name, description, price, is_paintable, is_removable, is_cuttable)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO products (id, name, description, price, thickness_mils, is_paintable, is_removable, is_cuttable)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT (id) DO UPDATE SET
        name = EXCLUDED.name,
        description = EXCLUDED.description,
        price = EXCLUDED.price,
+       thickness_mils = EXCLUDED.thickness_mils,
        is_paintable = EXCLUDED.is_paintable,
        is_removable = EXCLUDED.is_removable,
        is_cuttable = EXCLUDED.is_cuttable`,
-    [product.id, product.name, product.description, product.price,
+    [product.id, product.name, product.description, product.price, product.thicknessMils,
      product.isPaintable, product.isRemovable, product.isCuttable]
   );
 

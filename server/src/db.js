@@ -12,6 +12,7 @@ export const pool = new Pool(
 
 const PRODUCT_SELECT = `
   SELECT p.id, p.name, p.description, p.price::float AS price,
+         p.thickness_mils AS "thicknessMils",
          p.is_paintable AS "isPaintable",
          p.is_removable AS "isRemovable",
          p.is_cuttable AS "isCuttable",

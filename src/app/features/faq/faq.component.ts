@@ -95,7 +95,7 @@ export class FaqComponent {
     {
       category: 'product',
       q: 'How durable is the vinyl?',
-      a: 'The 20-mil vinyl is built for repeated impact from wheelchair footrests, walker feet, and vacuums. It resists scratches, scuffs, moisture, and household cleaners, and carries a 10-year material warranty — the same grade used in commercial kitchen and healthcare casework.'
+      a: 'Standard Protect uses 20-mil vinyl for heavy repeated impact; Ultra-Thin Easy Grip uses a 10-mil low-profile sheet for tighter toe-kick and narrow-base installs. Both resist scratches, scuffs, moisture, and household cleaners, and carry a 10-year material warranty — the same grades used in commercial kitchen and healthcare casework.'
     },
     {
       category: 'care',

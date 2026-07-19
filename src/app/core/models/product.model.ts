@@ -16,6 +16,7 @@ export interface VinylProtector {
   name: string;
   description: string;
   price: number;
+  thicknessMils: number;
   isPaintable: boolean;
   isRemovable: boolean;
   isCuttable: boolean;

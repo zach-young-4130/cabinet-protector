@@ -27,8 +27,9 @@ export const products = [
   {
     id: '1',
     name: 'Standard Protect - Matte Finish',
-    description: 'Heavy-duty vinyl barrier strip for the base of floor-length cabinets. Absorbs impacts from wheelchair footrests, walkers, and everyday kicks so the door underneath never chips. Fully paintable and sized for common cabinet widths.',
+    description: 'Heavy-duty 20-mil vinyl barrier strip for the base of floor-length cabinets. Absorbs impacts from wheelchair footrests, walkers, and everyday kicks so the door underneath never chips. Fully paintable and sized for common cabinet widths.',
     price: 45.00,
+    thicknessMils: 20,
     isPaintable: true,
     isRemovable: true,
     isCuttable: true,
@@ -40,8 +41,9 @@ export const products = [
   {
     id: '2',
     name: 'Ultra-Thin Easy Grip',
-    description: 'Low-profile barrier strip for narrow base panels and tight toe-kick areas. Still fully paintable and easy to cut to any cabinet run.',
+    description: 'Low-profile 10-mil barrier strip for narrow base panels and tight toe-kick areas. Still fully paintable and easy to cut to any cabinet run.',
     price: 38.00,
+    thicknessMils: 10,
     isPaintable: true,
     isRemovable: true,
     isCuttable: true,
