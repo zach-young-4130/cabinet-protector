@@ -269,15 +269,59 @@ Self-ban and self-delete are rejected server-side. The initial bundle is now ~56
 4. No changes to `environment.ts` / `environment.development.ts` — `apiUrl: '/api'` in production already assumes same-origin API, which is exactly what this setup provides.
 
 ### Required Vercel configuration (not code — set in the Vercel dashboard before going live)
-- **Environment variables**: `DATABASE_URL` (a Postgres reachable from Vercel's network — a local `PGDATABASE` won't work; e.g. Neon/Supabase/Vercel Postgres), `STRIPE_SECRET_KEY`, `CHECKOUT_RETURN_URL` (set to `https://<your-domain>/checkout`), `APP_URL` (set to `https://<your-domain>`), and optionally `RESEND_API_KEY` / `EMAIL_FROM` (without `RESEND_API_KEY`, verification/reset links are only logged to the Vercel function logs, not emailed).
-- **Database migration**: run `npm run db:setup` once against the production `DATABASE_URL` (from a machine that can reach it) before first use.
-- **Connection pooling caveat**: `server/src/db.js` creates one `pg.Pool` per module load, and a cold-started serverless function is a fresh module load — under concurrent traffic this can open more connections than a small Postgres instance allows. Not changed here since the right fix depends on the DB provider (many, like Neon/Supabase, offer a pooled connection string that's a drop-in `DATABASE_URL` swap with no code change). Worth revisiting if `/api/health` starts returning connection errors under load.
+- **Environment variables**: `STRIPE_SECRET_KEY`, `CHECKOUT_RETURN_URL` (set to `https://<your-domain>/checkout`), `APP_URL` (set to `https://<your-domain>`), and optionally `RESEND_API_KEY` / `EMAIL_FROM` (without `RESEND_API_KEY`, verification/reset links are only logged to the Vercel function logs, not emailed). With the Supabase↔Vercel integration installed, no database env var needs to be set by hand — see below.
+
+### Supabase + migrations on deploy (2026-07-19)
+The database is Supabase, connected via the Vercel integration, which injects `POSTGRES_URL` (Supavisor **transaction-mode pooler**, port 6543) and `POSTGRES_URL_NON_POOLING` (**session/direct**, port 5432) among others. Wired up so migrations run automatically on every deploy:
+
+1. **`db.js` connection fallback is now `DATABASE_URL || POSTGRES_URL`** — at runtime the serverless functions pick up the integration's pooled URL automatically. This also resolves the earlier "connection pooling caveat": transaction-mode pooling is exactly the fix that was deferred, and it needs no manual env var. (Our queries are single, unnamed parameterized statements — compatible with transaction-mode pooling.)
+2. **`vercel.json` buildCommand** is now `DATABASE_URL=${POSTGRES_URL_NON_POOLING:-$DATABASE_URL} npm --prefix server run db:setup && npm run build` — the idempotent schema/seed script (`CREATE TABLE IF NOT EXISTS` + upserts, safe to re-run every deploy) executes against the **non-pooled** connection (Supabase's recommendation for DDL) before the frontend builds; a failed migration fails the deploy before anything ships. Shell-expansion fallbacks verified: prefers `POSTGRES_URL_NON_POOLING`, falls back to a manually set `DATABASE_URL`, and expands to empty locally (where `db.js` then falls through to `POSTGRES_URL`/`PG*`/local default, so `npm run db:setup` in `server/` still targets local Postgres unchanged).
+3. **SSL needs no code change**: verified in the installed `pg-connection-string@2.14.0` source that `sslmode=require` (what Supabase URLs carry) maps to `ssl: { rejectUnauthorized: false }`, matching libpq semantics — connections succeed without custom CA plumbing.
+4. Preview deployments run the same idempotent setup against whatever database their env exposes — with the default integration setup that's the **same** database as production; use Supabase branching or a separate preview project if isolation matters later.
+
+Alternative for one-off/manual runs (no deploy): copy the *session* connection string from the Supabase dashboard (port 5432) and run `DATABASE_URL='postgres://…' npm run db:setup` from `server/` locally.
+
+### Deployment debugging session (2026-07-19) — what production actually needed
+Live debugging against the real Vercel project (CLI, preview deploys) surfaced four fixes beyond the original setup; the third preview deploy succeeded with `Database ready: { products: '2', sizes: '4', colors: '6' }` in the build log — the Supabase migration now runs on deploy:
+1. **SPA rewrite was swallowing `/api/*`.** The deployed function (`λ api/[...path]`) existed, but `/api/health` returned `index.html` — the catch-all rewrite `/(.*)` shadows dynamic function routes. Fix: `"source": "/((?!api/).*)"` (negative lookahead).
+2. **This project's Supabase integration injects `DATABASE_`-prefixed env vars** (`DATABASE_POSTGRES_URL`, `DATABASE_POSTGRES_URL_NON_POOLING`, …), not the unprefixed names. `db.js` now falls back `DATABASE_URL → DATABASE_POSTGRES_URL → POSTGRES_URL`, and the buildCommand prefers `DATABASE_POSTGRES_URL_NON_POOLING` with nested shell fallbacks (expansion behavior verified locally). Note: a leftover manually-set `PGDATABASE` on Vercel had been silently routing the setup script to localhost (`ECONNREFUSED 127.0.0.1:5432`); it is ignored now that a connection string resolves, but removing `PGDATABASE` and `PORT` from the Vercel env would avoid confusion.
+3. **TLS: newer `pg` escalates `sslmode=require` to `verify-full`** and rejects Supabase's own-CA chain (`SELF_SIGNED_CERT_IN_CHAIN`) — the earlier claim that no SSL change was needed was wrong (it was based on the older locally-installed pg). `db.js` rewrites `sslmode=require` → `sslmode=no-verify` in the connection URL (pg's explicit encrypt-without-CA-verification mode, i.e. libpq's actual "require" semantics). URL rewriting, not an `ssl` config object, because pg merges the parsed URL *over* explicit config (verified in pg source). Upgrade path if stricter verification is wanted later: download the Supabase CA cert and use `sslrootcert`.
+4. **`engines.node` bumped 20.x → 24.x** — Vercel deprecation (20.x builds fail after 2026-10-01) and the project setting was already 24.x.
+
+Remaining to go live: these fixes exist locally/in preview only — production deploys from `main` via git, so they must be committed and pushed (or promoted with `vercel deploy --prod`, which the next git push would overwrite if unpushed).
 
 ### Progress Tracking
 - [x] `api/[...path].mjs` serverless bridge (verified locally against a real HTTP request)
 - [x] `vercel.json` (install/build/output/rewrites)
 - [x] `engines.node` pinned
 - [x] `ng build` verified to produce output at the configured `outputDirectory`
-- [ ] Environment variables set in the Vercel dashboard (user action)
-- [ ] `npm run db:setup` run against production database (user action)
+- [x] Supabase integration wiring: `db.js` falls back to pooled `POSTGRES_URL`; buildCommand runs idempotent `db:setup` against `POSTGRES_URL_NON_POOLING` on every deploy
+- [ ] Remaining env vars set in the Vercel dashboard: `STRIPE_SECRET_KEY`, `CHECKOUT_RETURN_URL`, `APP_URL`, optionally `RESEND_API_KEY`/`EMAIL_FROM` (user action)
 - [ ] First deploy verified end-to-end (user action)
+
+## Phase 7: Structured Server Logging (2026-07-19)
+
+### Goals
+- [x] Detailed request/response/error logs for the hapi server — readable locally and in Vercel's function log viewer.
+
+### Decisions
+User chose **hapi-pino** (the actively-maintained standard for hapi; the older `good` logging ecosystem is deprecated) over hand-rolled `server.events` + `console.log`. Confirmed compatible: hapi-pino v13.x targets `@hapi/hapi` v21, which matches this project. Confirmed via the plugin's source (`pinojs/hapi-pino` on GitHub) that `level`, `redact`, and `transport` are all passed straight through to the underlying `pino()` call — so the dev/prod split and header redaction below work as expected, not just per the README.
+
+### Technical Strategy
+1. **`server/src/server.js`**: `buildServer` is now `async` (needed since `server.register()` must be awaited before routes are added). Registers `hapi-pino` right after `Hapi.server(...)` construction:
+   - `level`: `LOG_LEVEL` env var, default `info`.
+   - `redact: ['req.headers.authorization']` — bearer tokens never appear in logs.
+   - `transport: { target: 'pino-pretty', ... }` only when `NODE_ENV !== 'production'` — colorized human-readable logs locally, plain JSON lines in production (Vercel sets `NODE_ENV=production` for both Production and Preview deployments, so this split is automatic with no env var to set).
+   - Defaults log one line per completed request (method/path/status/duration) and full error objects with stack traces on request errors — no payload/query/path-param logging by default, so login/signup/reset passwords are never logged.
+2. **Call sites updated to `await buildServer()`**: `server/src/index.js`, `server/src/smoke.js`, `api/[...path].mjs` (all previously called it synchronously).
+3. **`server/src/smoke.js`** sets `process.env.LOG_LEVEL ??= 'silent'` before building the server, so the existing PASS/FAIL console output stays readable by default; set `LOG_LEVEL=info npm run smoke` to see per-request logs while debugging a failing run.
+4. **New dependencies**: `hapi-pino` (dependency) and `pino-pretty` (devDependency, dev-only pretty-printer — never imported when `NODE_ENV=production`, so its absence there is harmless) added to `server/package.json`. **Not yet installed — run `npm install` inside `server/` before starting the API or running smoke.**
+
+### Progress Tracking
+- [x] `hapi-pino` + `pino-pretty` added to `server/package.json`
+- [x] `buildServer` registers hapi-pino (dev pretty-print / prod JSON, `LOG_LEVEL`, Authorization redaction)
+- [x] All three call sites updated to `await buildServer()`
+- [x] `smoke.js` defaults to silent logging
+- [x] All touched files syntax-checked
+- [ ] `npm install` run inside `server/` (user action — new dependencies not yet installed)
+- [ ] `npm run smoke` re-run after install to confirm the server still boots correctly

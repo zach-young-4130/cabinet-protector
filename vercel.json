@@ -1,8 +1,8 @@
 {
   "installCommand": "npm install && npm install --prefix server",
-  "buildCommand": "npm run build",
+  "buildCommand": "DATABASE_URL=${DATABASE_POSTGRES_URL_NON_POOLING:-${POSTGRES_URL_NON_POOLING:-$DATABASE_URL}} npm --prefix server run db:setup && npm run build",
   "outputDirectory": "dist/protect-vinyl/browser",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

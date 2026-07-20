@@ -15,7 +15,7 @@ let serverPromise = null;
 function getServer() {
   if (!serverPromise) {
     serverPromise = (async () => {
-      const server = buildServer();
+      const server = await buildServer();
       await server.initialize();
       return server;
     })();

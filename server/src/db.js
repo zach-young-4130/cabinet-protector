@@ -2,11 +2,23 @@ import pg from 'pg';
 
 const { Pool } = pg;
 
-// Connection: DATABASE_URL wins; POSTGRES_URL (the pooled Supavisor URL the
-// Supabase↔Vercel integration injects) is next — transaction-mode pooling is
-// what serverless runtime traffic should use; otherwise standard PG* env vars
-// apply, defaulting to the local "protect_vinyl" database.
-const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+// Connection: DATABASE_URL wins; next the pooled Supavisor URL from the
+// Supabase↔Vercel integration (this project's integration uses a DATABASE_
+// prefix, hence both spellings) — transaction-mode pooling is what serverless
+// runtime traffic should use; otherwise standard PG* env vars apply,
+// defaulting to the local "protect_vinyl" database.
+const rawUrl = process.env.DATABASE_URL
+  || process.env.DATABASE_POSTGRES_URL
+  || process.env.POSTGRES_URL;
+
+// Supabase URLs declare sslmode=require, which current pg escalates to
+// verify-full and then rejects Supabase's own-CA chain
+// (SELF_SIGNED_CERT_IN_CHAIN). no-verify is pg's explicit
+// encrypt-without-CA-verification mode — libpq's actual "require" semantics.
+// An explicit ssl config object would be overridden by the parsed URL
+// (pg merges parse(connectionString) over the config), so the URL itself is
+// rewritten instead.
+const connectionString = rawUrl?.replace('sslmode=require', 'sslmode=no-verify');
 export const pool = new Pool(
   connectionString
     ? { connectionString }
