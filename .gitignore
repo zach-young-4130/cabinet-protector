@@ -50,8 +50,7 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 
-# Environment secrets
-.env
-.env.local
+# API Environment secrets
 server/.env
-server/.env.local
+server/.env.production
+.vercel
