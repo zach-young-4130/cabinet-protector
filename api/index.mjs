@@ -1,5 +1,8 @@
 // Vercel Serverless Function bridging every /api/* request into the Hapi
-// server defined in server/src/server.js.
+// server defined in server/src/server.js. All /api/* traffic is funneled here
+// by the vercel.json rewrite (a [...path].mjs catch-all only matched a single
+// path segment on Vercel's router, 404ing /api/auth/signup and friends);
+// rewrites preserve the original req.url, so Hapi still sees the full path.
 //
 // Hapi wires its internal http.Server's 'request' listener (this.listener)
 // at construction time, not at server.start() — start() only calls
