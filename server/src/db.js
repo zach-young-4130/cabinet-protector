@@ -2,11 +2,14 @@ import pg from 'pg';
 
 const { Pool } = pg;
 
-// Connection: DATABASE_URL wins; otherwise standard PG* env vars apply,
-// defaulting to the local "protect_vinyl" database.
+// Connection: DATABASE_URL wins; POSTGRES_URL (the pooled Supavisor URL the
+// Supabase↔Vercel integration injects) is next — transaction-mode pooling is
+// what serverless runtime traffic should use; otherwise standard PG* env vars
+// apply, defaulting to the local "protect_vinyl" database.
+const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 export const pool = new Pool(
-  process.env.DATABASE_URL
-    ? { connectionString: process.env.DATABASE_URL }
+  connectionString
+    ? { connectionString }
     : { database: process.env.PGDATABASE || 'protect_vinyl' }
 );
 

@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { buildServer } from './server.js';
 
-const server = buildServer();
+const server = await buildServer();
 
 await server.start();
 console.log(`ProTectVinyl API running at ${server.info.uri}`);

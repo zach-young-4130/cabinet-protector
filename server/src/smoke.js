@@ -2,7 +2,11 @@ import 'dotenv/config';
 import { buildServer } from './server.js';
 import { pool } from './db.js';
 
-const server = buildServer();
+// Keep PASS/FAIL output readable — override with LOG_LEVEL=info (etc.) for
+// verbose per-request logs while debugging a failing smoke run.
+process.env.LOG_LEVEL ??= 'silent';
+
+const server = await buildServer();
 await server.initialize();
 
 let failures = 0;

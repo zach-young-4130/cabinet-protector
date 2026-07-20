@@ -1,4 +1,5 @@
 import Hapi from '@hapi/hapi';
+import HapiPino from 'hapi-pino';
 import Joi from 'joi';
 import { randomUUID } from 'node:crypto';
 import {
@@ -287,7 +288,7 @@ async function createCustomerWithWelcome({ email, fullName, phone, passwordHash 
   return customer;
 }
 
-export function buildServer() {
+export async function buildServer() {
   const server = Hapi.server({
     port: process.env.PORT || 3000,
     host: 'localhost',
@@ -300,6 +301,22 @@ export function buildServer() {
       }
     }
   });
+
+  // JSON request/response/error logs in production (readable by Vercel's
+  // function log viewer and any log drain); pretty-printed in dev.
+  // LOG_LEVEL defaults to 'info' — set to 'silent' to disable entirely
+  // (smoke.js does this so PASS/FAIL output stays readable).
+  const pinoOptions = {
+    level: process.env.LOG_LEVEL || 'info',
+    redact: ['req.headers.authorization']
+  };
+  if (process.env.NODE_ENV !== 'production') {
+    pinoOptions.transport = {
+      target: 'pino-pretty',
+      options: { colorize: true, translateTime: 'HH:MM:ss', ignore: 'pid,hostname' }
+    };
+  }
+  await server.register({ plugin: HapiPino, options: pinoOptions });
 
   server.route({
     method: 'GET',

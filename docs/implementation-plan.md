@@ -246,3 +246,38 @@ To run: `npm run db:setup` in `server/` (new tables), then `npm run smoke`. Opti
 To run: `npm run db:setup` in `server/`, then `npm run smoke`. Grant admin with:
 `UPDATE customers SET is_admin = true WHERE email = 'you@example.com';`
 Self-ban and self-delete are rejected server-side. The initial bundle is now ~569 kB (69 kB over the 500 kB warning budget) — lazy-loading the admin/account routes would claw this back if it starts to matter.
+
+## Phase 6: Vercel Deployment (2026-07-19)
+
+### Goals
+- [x] Serve the Angular production build as static output.
+- [x] Serve the existing hapi API (`server/`) as a Vercel Serverless Function under `/api/*`, unmodified.
+- [x] SPA fallback so deep links (e.g. `/account/orders`, refreshed) resolve to `index.html` instead of 404ing.
+- [x] Both installed and buildable from a single Vercel project pointed at the repo root — no restructuring into an npm workspace.
+
+### Decisions & Assumptions
+1. **The hapi server itself needed zero changes.** `Hapi.server()` creates its internal `http.Server` and attaches the `'request'` dispatcher at construction time (`core.js`'s `_createListener()`), not at `.start()` — `.start()` only calls `.listen()` to bind a socket. So `server.initialize()` (hapi's own documented no-socket startup path) followed by forwarding Vercel's `req`/`res` straight into `server.listener.emit('request', req, res)` runs the exact same routing/validation/handlers as the local dev server. Verified locally by piping a plain `http.Server` into the handler and confirming hapi's own JSON 404 came back for an unknown route.
+2. **One catch-all function, not one file per route.** `api/[...path].mjs` matches every `/api/*` request; Vercel forwards the original `req.url` unmodified, so hapi's own router (which already expects paths like `/api/products/{id}`) matches correctly without any path rewriting.
+3. **`server/`'s dependencies are installed via a custom `installCommand`**, not by converting the repo into an npm workspace: `npm install && npm install --prefix server`. Node's module resolution walks up from `server/src/*.js`, finds `server/node_modules`, and `@vercel/nft`'s build-time file tracer follows the same resolution algorithm — confirmed by locating `@hapi/hapi`'s `listener` wiring directly in `server/node_modules`.
+4. **SPA fallback (`rewrites: [{ source: "/(.*)", destination: "/index.html" }]`) is safe with the API present**: Vercel only applies a rewrite when no static file or Serverless Function matches the request first, so `/api/*` always reaches the function and everything else falls through to `index.html` for Angular's router to handle client-side.
+5. **`.env` files are not used in production** — Vercel injects environment variables directly into `process.env`; the server code that reads `process.env.DATABASE_URL` / `STRIPE_SECRET_KEY` / etc. needed no changes. `server/.env` was confirmed already gitignored and never committed.
+
+### Technical Strategy
+1. **`api/[...path].mjs`** (repo root): imports `buildServer` from `server/src/server.js`, lazily builds + initializes one hapi server instance per warm container (module-level cached promise), and forwards every request into `server.listener`.
+2. **`vercel.json`** (repo root): `installCommand` (installs both root and `server/` deps), `buildCommand: npm run build`, `outputDirectory: dist/protect-vinyl/browser` (matches the new `@angular/build:application` builder's nested output), and the SPA-fallback rewrite.
+3. **`package.json`**: added `engines.node: "20.x"` so Vercel picks a Node runtime that satisfies both Angular 21 and hapi 21's minimums for the build container and the function runtime alike.
+4. No changes to `environment.ts` / `environment.development.ts` — `apiUrl: '/api'` in production already assumes same-origin API, which is exactly what this setup provides.
+
+### Required Vercel configuration (not code — set in the Vercel dashboard before going live)
+- **Environment variables**: `DATABASE_URL` (a Postgres reachable from Vercel's network — a local `PGDATABASE` won't work; e.g. Neon/Supabase/Vercel Postgres), `STRIPE_SECRET_KEY`, `CHECKOUT_RETURN_URL` (set to `https://<your-domain>/checkout`), `APP_URL` (set to `https://<your-domain>`), and optionally `RESEND_API_KEY` / `EMAIL_FROM` (without `RESEND_API_KEY`, verification/reset links are only logged to the Vercel function logs, not emailed).
+- **Database migration**: run `npm run db:setup` once against the production `DATABASE_URL` (from a machine that can reach it) before first use.
+- **Connection pooling caveat**: `server/src/db.js` creates one `pg.Pool` per module load, and a cold-started serverless function is a fresh module load — under concurrent traffic this can open more connections than a small Postgres instance allows. Not changed here since the right fix depends on the DB provider (many, like Neon/Supabase, offer a pooled connection string that's a drop-in `DATABASE_URL` swap with no code change). Worth revisiting if `/api/health` starts returning connection errors under load.
+
+### Progress Tracking
+- [x] `api/[...path].mjs` serverless bridge (verified locally against a real HTTP request)
+- [x] `vercel.json` (install/build/output/rewrites)
+- [x] `engines.node` pinned
+- [x] `ng build` verified to produce output at the configured `outputDirectory`
+- [ ] Environment variables set in the Vercel dashboard (user action)
+- [ ] `npm run db:setup` run against production database (user action)
+- [ ] First deploy verified end-to-end (user action)
