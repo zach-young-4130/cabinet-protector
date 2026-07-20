@@ -3,6 +3,7 @@
   "buildCommand": "DATABASE_URL=${DATABASE_POSTGRES_URL_NON_POOLING:-${POSTGRES_URL_NON_POOLING:-$DATABASE_URL}} npm --prefix server run db:setup && npm run build",
   "outputDirectory": "dist/protect-vinyl/browser",
   "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
