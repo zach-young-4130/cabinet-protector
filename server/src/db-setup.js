@@ -97,6 +97,31 @@ await pool.query(`
   ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_customer_id_fkey;
   ALTER TABLE orders ADD CONSTRAINT orders_customer_id_fkey
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL;
+
+  -- Supabase exposes the public schema through its auto-generated REST API
+  -- (PostgREST) using the shareable anon key. This app only ever talks to
+  -- Postgres directly from its own server, so that surface is pure liability:
+  -- enable RLS on every table (with no policies, non-owner roles get nothing;
+  -- the server connects as the table owner, which bypasses RLS, so app
+  -- queries are unaffected) and drop the API roles' grants outright. The DO
+  -- block makes this a no-op on local Postgres, where Supabase's roles
+  -- don't exist.
+  ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE product_sizes ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE stock_colors ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE email_verifications ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE password_resets ENABLE ROW LEVEL SECURITY;
+
+  DO $$
+  BEGIN
+    IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN
+      REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authenticated;
+    END IF;
+  END $$;
 `);
 
 for (const product of products) {
