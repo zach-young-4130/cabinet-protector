@@ -54,3 +54,4 @@ Thumbs.db
 server/.env
 server/.env.production
 .vercel
+server/.env.local
