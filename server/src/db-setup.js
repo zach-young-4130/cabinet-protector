@@ -115,11 +115,17 @@ await pool.query(`
   ALTER TABLE email_verifications ENABLE ROW LEVEL SECURITY;
   ALTER TABLE password_resets ENABLE ROW LEVEL SECURITY;
 
+  -- Revoking schema USAGE from the client-facing API roles removes the Data
+  -- API surface entirely: PostgREST/GraphQL can't even introspect the schema
+  -- for these roles, so every anon/authenticated call fails at the door.
+  -- The owner role the app connects as is unaffected. service_role is left
+  -- alone (secret, server-only, used by Supabase dashboard features).
   DO $$
   BEGIN
     IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN
       REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
       ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authenticated;
+      REVOKE USAGE ON SCHEMA public FROM anon, authenticated;
     END IF;
   END $$;
 `);
